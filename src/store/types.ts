@@ -42,14 +42,19 @@ export type Action =
   | { type: 'toast'; text: string }
   | { type: 'clearToast'; seq: number };
 
-/** Turkish toast copy, verbatim from the prototype. */
+/**
+ * Turkish toast copy, verbatim from the prototype.
+ *
+ * `theme` is gone as of P8: the theme control performs a real state change through
+ * `ThemeProvider`, so there is nothing left to apologise for in a toast
+ * (arch-001 §4 deletes the theme toast entirely).
+ */
 export const TOASTS = {
   saved: 'Kaydedildi',
   unsaved: 'Kayıt kaldırıldı',
   deleted: 'Kayıt silindi',
   digestTime: 'Digest saati güncellendi',
   openSource: 'Kaynak tarayıcıda açılır',
-  theme: 'Prototipte koyu tema sabit — light tema panoda',
 } as const;
 
 export const DIGEST_TIMES = ['07:00', '07:30', '08:00', '08:30', '09:00'] as const;

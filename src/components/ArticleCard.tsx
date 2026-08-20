@@ -1,8 +1,10 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import type { Article } from '../data/articles';
-import { colors, fonts, radius } from '../theme/tokens';
+import type { Palette } from '../theme/palettes';
+import { useTheme, useThemedStyles } from '../theme/ThemeProvider';
+import { fonts, radius } from '../theme/typography';
 
 /**
  * Feed and search share one card. The only difference in the prototype is the
@@ -17,14 +19,14 @@ export function ArticleCard({
   onPress: () => void;
   showTranslationTag: boolean;
 }) {
+  const { palette } = useTheme();
+  const styles = useThemedStyles(createStyles);
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.card,
-        pressed && { borderColor: 'rgba(96,165,250,.55)' },
-      ]}
+      style={({ pressed }) => [styles.card, pressed && { borderColor: palette.borderChip }]}
     >
       <View style={styles.row}>
         <View style={styles.tile}>
@@ -45,11 +47,11 @@ export function ArticleCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) => ({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: palette.border,
     borderRadius: radius.card,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -60,28 +62,28 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  row: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
   tile: {
     width: 36,
     height: 36,
     borderRadius: radius.tile,
-    backgroundColor: colors.tile,
+    backgroundColor: palette.tile,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: palette.borderStrong,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  tileText: { fontSize: 12, fontFamily: fonts.xb, color: colors.lightAccent },
+  tileText: { fontSize: 12, fontFamily: fonts.xb, color: palette.lightAccent },
   mid: { flex: 1, minWidth: 0 },
-  src: { fontSize: 13, fontFamily: fonts.sb, color: colors.text },
-  meta: { fontSize: 12, fontFamily: fonts.r, color: colors.text55 },
+  src: { fontSize: 13, fontFamily: fonts.sb, color: palette.text },
+  meta: { fontSize: 12, fontFamily: fonts.r, color: palette.text55 },
   catPill: {
     borderWidth: 1,
-    borderColor: colors.borderChip,
+    borderColor: palette.borderChip,
     borderRadius: radius.pill,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
-  catText: { fontSize: 11, fontFamily: fonts.sb, color: colors.accentText },
-  title: { fontSize: 16, fontFamily: fonts.sb, color: colors.text, lineHeight: 22 },
+  catText: { fontSize: 11, fontFamily: fonts.sb, color: palette.accentText },
+  title: { fontSize: 16, fontFamily: fonts.sb, color: palette.text, lineHeight: 22 },
 });

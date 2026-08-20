@@ -340,14 +340,12 @@ describe('migration 0001: schemas and PostgREST exposure', () => {
     expect(first.sql.toLowerCase()).toContain('create schema if not exists private');
   });
 
-  it('exposes aigundem to PostgREST without hiding public from the other app', () => {
-    const stmt = first.statements.find((s) =>
-      s.toLowerCase().includes('pgrst.db_schemas'),
-    );
-    expect(stmt).toBeDefined();
-    expect(stmt!.toLowerCase()).toContain('alter role authenticator set');
-    expect(stmt!).toContain("'public, aigundem'");
-    expect(first.sql.toLowerCase()).toContain("notify pgrst, 'reload config'");
+  it('does not try to alter the reserved authenticator role (hosted Supabase: 42501)', () => {
+    // Measured 2026-08-21 while applying 0001 remotely: ALTER ROLE authenticator
+    // is superuser-only on hosted Supabase. Exposing `aigundem` to PostgREST is a
+    // Dashboard setting; until then clients read through the public shims in 0006.
+    expect(first.sql.toLowerCase()).not.toContain('alter role authenticator');
+    expect(first.sql.toLowerCase()).toContain('exposed schemas');
   });
 
   it('declares the five shipped categories exactly once, as a domain', () => {

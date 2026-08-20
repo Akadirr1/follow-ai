@@ -9,12 +9,13 @@ import {
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Toast } from '../src/components/Toast';
 import { StoreProvider } from '../src/store/StoreProvider';
-import { colors } from '../src/theme/tokens';
+import { dark } from '../src/theme/palettes';
+import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -34,33 +35,50 @@ export default function RootLayout() {
   }, [fontError]);
 
   if (!fontsLoaded && !fontError) {
-    // Blank canvas rather than a flash of fallback type.
-    return <View style={styles.root} />;
+    // Blank canvas rather than a flash of fallback type. Dark is the primary theme,
+    // so the gate paints dark before the stored preference is known.
+    return <View style={{ flex: 1, backgroundColor: dark.appBg }} />;
   }
 
   return (
     <SafeAreaProvider>
-      <StoreProvider>
-        <View style={styles.root}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.appBg },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="article/[id]" />
-            <Stack.Screen name="search" options={{ animation: 'fade' }} />
-          </Stack>
-          <Toast />
-        </View>
-      </StoreProvider>
+      <ThemeProvider>
+        <StoreProvider>
+          <ThemedApp />
+        </StoreProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.appBg },
-});
+/**
+ * Inside the provider so it can read the resolved palette. It holds the same blank
+ * canvas until the stored preference has been read, so the app never paints one
+ * theme and then swaps to the other in front of the user.
+ */
+function ThemedApp() {
+  const { palette, scheme, isReady } = useTheme();
+
+  if (!isReady) {
+    return <View style={{ flex: 1, backgroundColor: dark.appBg }} />;
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: palette.appBg }}>
+      {/* Light content on a dark ground and vice versa. */}
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: palette.appBg },
+          animation: 'slide_from_right',
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="article/[id]" />
+        <Stack.Screen name="search" options={{ animation: 'fade' }} />
+      </Stack>
+      <Toast />
+    </View>
+  );
+}

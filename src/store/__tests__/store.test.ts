@@ -208,12 +208,11 @@ describe('translate toggle', () => {
 });
 
 describe('toasts', () => {
-  it('carries the prototype copy for source and theme taps', () => {
+  // The theme toast was deleted in P8: the Tema control is now a real three-state
+  // preference, so there is no "koyu tema sabit" message left to assert.
+  it('carries the prototype copy for the source tap', () => {
     expect(run({ type: 'toast', text: TOASTS.openSource }).toast).toBe(
       'Kaynak tarayıcıda açılır',
-    );
-    expect(run({ type: 'toast', text: TOASTS.theme }).toast).toBe(
-      'Prototipte koyu tema sabit — light tema panoda',
     );
   });
 

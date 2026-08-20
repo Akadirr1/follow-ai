@@ -1,9 +1,11 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 
 import { useDispatch, useStore } from '../store/StoreProvider';
 import { DIGEST_TIMES } from '../store/types';
-import { colors, fonts, mono, radius } from '../theme/tokens';
+import type { Palette } from '../theme/palettes';
+import { useTheme, useThemedStyles } from '../theme/ThemeProvider';
+import { fonts, mono, radius } from '../theme/typography';
 
 /**
  * Bottom sheet for the digest hour. The pick is staged in `tmpTime`: Vazgeç closes
@@ -12,6 +14,8 @@ import { colors, fonts, mono, radius } from '../theme/tokens';
 export function DigestTimeSheet() {
   const { sheet, tmpTime } = useStore();
   const dispatch = useDispatch();
+  const { palette } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   return (
     <Modal
@@ -41,14 +45,14 @@ export function DigestTimeSheet() {
                 accessibilityState={{ selected: picked }}
                 style={[
                   styles.time,
-                  { backgroundColor: picked ? colors.accentSheetPick : 'transparent' },
+                  { backgroundColor: picked ? palette.accentSheetPick : 'transparent' },
                 ]}
               >
                 <Text
                   style={[
                     styles.timeText,
                     {
-                      color: picked ? colors.text : colors.text45,
+                      color: picked ? palette.text : palette.text45,
                       fontSize: picked ? 22 : 17,
                       fontWeight: picked ? '800' : '600',
                     },
@@ -67,7 +71,7 @@ export function DigestTimeSheet() {
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.cancel,
-              pressed && { backgroundColor: 'rgba(37,99,235,.12)' },
+              pressed && { backgroundColor: palette.accentSheetPick },
             ]}
           >
             <Text style={styles.cancelText}>Vazgeç</Text>
@@ -77,7 +81,7 @@ export function DigestTimeSheet() {
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.save,
-              { backgroundColor: pressed ? colors.accentPressed : colors.accent },
+              { backgroundColor: pressed ? palette.accentPressed : palette.accent },
             ]}
           >
             <Text style={styles.saveText}>Kaydet</Text>
@@ -88,14 +92,14 @@ export function DigestTimeSheet() {
   );
 }
 
-const styles = StyleSheet.create({
-  scrim: { flex: 1, backgroundColor: colors.scrim },
+const createStyles = (palette: Palette) => ({
+  scrim: { flex: 1, backgroundColor: palette.scrim },
   sheet: {
-    backgroundColor: colors.card,
+    backgroundColor: palette.card,
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
     borderTopWidth: 1,
-    borderTopColor: colors.borderSheet,
+    borderTopColor: palette.borderSheet,
     paddingTop: 10,
     paddingHorizontal: 20,
     paddingBottom: 40,
@@ -103,38 +107,38 @@ const styles = StyleSheet.create({
   grabber: {
     width: 40,
     height: 4,
-    backgroundColor: colors.text25,
+    backgroundColor: palette.text25,
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: 'center' as const,
     marginBottom: 14,
   },
-  title: { fontSize: 17, fontFamily: fonts.b, color: colors.text, marginBottom: 4 },
-  sub: { fontSize: 13, fontFamily: fonts.r, color: colors.text55, marginBottom: 12 },
+  title: { fontSize: 17, fontFamily: fonts.b, color: palette.text, marginBottom: 4 },
+  sub: { fontSize: 13, fontFamily: fonts.r, color: palette.text55, marginBottom: 12 },
   times: { gap: 4 },
   time: {
     height: 46,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   timeText: { fontFamily: mono },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  actions: { flexDirection: 'row' as const, gap: 10, marginTop: 16 },
   cancel: {
     flex: 1,
     height: 50,
     borderWidth: 1,
-    borderColor: colors.borderChip,
+    borderColor: palette.borderChip,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  cancelText: { fontSize: 15, fontFamily: fonts.sb, color: colors.text75 },
+  cancelText: { fontSize: 15, fontFamily: fonts.sb, color: palette.text75 },
   save: {
     flex: 1,
     height: 50,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  saveText: { fontSize: 15, fontFamily: fonts.b, color: colors.white },
+  saveText: { fontSize: 15, fontFamily: fonts.b, color: palette.onAccent },
 });
