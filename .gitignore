@@ -26,3 +26,8 @@ yarn-error.*
 
 # --- coordinator ---
 /graphify-out/
+
+# --- secrets ---
+.env
+.env.*
+# sablon: scripts/env.example

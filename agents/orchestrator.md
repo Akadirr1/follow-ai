@@ -89,9 +89,9 @@ A review or verification dispatch in this project contains:
 
 ## Authority
 
-- No commit, push, or remote has been authorized as of 2026-08-20. Workers
-  leave the working tree uncommitted for review; the human names what gets
-  staged and committed.
+- `main` has one human-authorized commit (`f5127e3`, 2026-08-21); no remote,
+  no push authorized. Workers leave the working tree uncommitted for review;
+  the human names what gets staged and committed, every time.
 - Anthropic API keys, Expo/EAS accounts, app-store credentials, and any paid
   network service: stop and ask.
 - The claude.ai Design project is the human's. Read it freely; never call the

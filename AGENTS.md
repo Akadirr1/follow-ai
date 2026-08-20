@@ -33,7 +33,9 @@ script block at the end first; the markup follows from it).
 
 1. **Target is an Expo SDK 54 / React Native mobile app.** Source: the
    prototype's Settings › Hakkında › Sürüm row reads `1.0.0 · Expo SDK 54`; the
-   prototype is a 390×844 iOS frame with an iOS status bar.
+   prototype is a 390×844 iOS frame with an iOS status bar. Confirmed by the
+   human on 2026-08-21 ("sdk54 kalsın") when `create-expo-app@latest` resolved
+   to SDK 57 — do not upgrade without a new decision.
 2. **UI language is Turkish; foreign content is auto-translated EN→TR with the
    original one tap away.** Source: every prototype string; Settings › ÇEVİRİ
    "Otomatik çeviri — Yabancı içerik Türkçeye çevrilir"; the detail screen's
@@ -108,5 +110,8 @@ orca orchestration run-list --json
 Stop and ask when the next step needs credentials (an Anthropic API key, Expo/EAS
 or app-store accounts), a policy change, deployment, publishing, or anything
 irreversible. Staging, committing, and pushing are separate decisions, each
-scoped to exactly what a human named. As of 2026-08-20 no commit has been
-authorized.
+scoped to exactly what a human named. First commit `f5127e3` (2026-08-21) was
+human-authorized. Remote `origin` = `git@github.com:Akadirr1/follow-ai.git`
+(added 2026-08-21 on the human's instruction); every push is still a separate,
+human-named decision. Secrets live only in `.env` (gitignored), filled with
+`npm run setup:env`; never give an API key an `EXPO_PUBLIC_` prefix.

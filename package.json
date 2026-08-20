@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "setup:env": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-env.ps1"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "0.4.2",
