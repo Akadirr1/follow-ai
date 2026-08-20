@@ -72,8 +72,8 @@ Applied migrations are immutable. Corrections use a later compensating migration
 
 | Table | Core columns and constraints | Required indexes |
 |---|---|---|
-| `sources` | `id uuid PK`, `slug text`, `name`, `feed_url`, `feed_url_hash bytea UNIQUE`, `site_url`, `language check(en,tr)`, `is_default bool`, `status check(pending,active,paused,failed)`, `etag`, `last_modified`, `next_fetch_at`, `last_fetched_at`, failure counters/timestamps, `created_by uuid NULL -> auth.users` | unique `slug` for defaults; `(status,next_fetch_at)`; `created_by` |
-| `articles` | `id uuid PK`, `source_id FK`, `external_id text`, `canonical_url`, `url_hash bytea`, `title`, `author`, `published_at`, `fetched_at`, `language check(en,tr,und)`, `content_text`, `content_quality check(full,excerpt)`, `content_hash bytea`, `excerpt`, timestamps | unique `(source_id,external_id)`; unique `url_hash`; `(published_at DESC,id DESC)`; `(source_id,published_at DESC,id DESC)`; GIN generated `search_tsv` using `simple` config |
+| `sources` | `id uuid PK`, `slug text`, `name`, `feed_url`, `feed_url_hash bytea UNIQUE`, `site_url`, `language check(en,tr)`, `category` restricted to the existing five non-`Tümü` values, `is_default bool`, `status check(pending,active,paused,failed)`, `etag`, `last_modified`, `next_fetch_at`, `last_fetched_at`, failure counters/timestamps | unique `slug` for defaults; `(status,next_fetch_at)`; GIN name `search_tsv` |
+| `articles` | `id uuid PK`, `source_id FK`, `external_id text`, `canonical_url`, `url_hash bytea`, `title`, `author`, `category` inherited from source, `published_at`, `fetched_at`, `language check(en,tr,und)`, `content_text`, `content_quality check(full,excerpt)`, `content_hash bytea`, `excerpt`, timestamps | unique `(source_id,external_id)`; unique `url_hash`; `(published_at DESC,id DESC)`; `(source_id,published_at DESC,id DESC)`; GIN title/category `search_tsv` using `simple` config |
 | `article_summaries` | `article_id PK/FK`, `content_hash`, `prompt_version`, `model`, `summary_tr text[] check(cardinality=3)`, `translation_tr text NULL`, `translation_state check(ready,not_required)`, `generated_at`; Turkish rows require `translation_tr IS NULL/not_required` | cache lookup `(article_id,content_hash,prompt_version,model)` |
 | `user_sources` | `(user_id,source_id) PK`, `enabled`, timestamps; `user_id -> auth.users`, `source_id -> sources` | partial `(user_id,source_id) WHERE enabled` |
 | `user_article_state` | `(user_id,article_id) PK`, nullable `saved_at`, nullable `read_at`, `updated_at`; delete row when both states are null | partial `(user_id,saved_at DESC) WHERE saved_at IS NOT NULL`; partial unread/saved index |
@@ -83,7 +83,7 @@ Applied migrations are immutable. Corrections use a later compensating migration
 | internal job/audit tables | `ai_jobs` unique `(article_id,content_hash,prompt_version,model)` with status/attempt/lease; `ingestion_runs`; `rate_limit_buckets(subject,action,window_start,count)` | AI `(status,available_at)`; runs by start; rate-limit composite PK |
 
 `feed_articles_v1` is a `security_invoker=true` view joining active sources,
-articles, and ready summaries. Feed pagination is keyset `(published_at,id)`, never
+articles, and only summaries whose `content_hash` still matches the article. Feed pagination is keyset `(published_at,id)`, never
 offset. `search_articles_v1(q,source_ids,limit)` uses `websearch_to_tsquery('simple',
 q)` and the GIN index; shared content means source IDs are preference filtering, not
 an authorization boundary.
@@ -103,9 +103,9 @@ ownership, not `is_anonymous`, so an upgraded identity retains rows.
   `sources`, `articles`, `article_summaries`, ready `digests`/`digest_items`, and the
   versioned view/RPC. Give `anon` no table access; the publishable key alone is not a
   device identity.
-- Shared-table SELECT policies: active sources, articles belonging to active sources,
-  summaries, and only digests whose parent is `ready`. There are no client INSERT,
-  UPDATE, or DELETE policies for shared content.
+- Shared-table SELECT policies: active default sources plus custom sources present in
+  the caller's `user_sources`; shared articles/summaries; and only digests whose parent
+  is `ready`. There are no client INSERT, UPDATE, or DELETE policies for shared content.
 - For `user_sources`, `user_article_state`, and `user_settings`, every SELECT/INSERT/
   UPDATE/DELETE policy is `TO authenticated USING ((select auth.uid())=user_id)
   WITH CHECK ((select auth.uid())=user_id)`. Subscription insert also requires an
@@ -151,7 +151,7 @@ named secret/service role; user calls require an anonymous session JWT.
 | Function | Trigger/auth | Request → success | Idempotency/cache/rate |
 |---|---|---|---|
 | `sync-feeds` | cron/manual; internal secret only | `{source_id?:uuid,max_sources?:1..20}` → `{run_id,sources_ok,sources_failed,inserted,updated,unchanged}` | leases due sources with `SKIP LOCKED`; ETag/Last-Modified; article unique keys; no device rate, max concurrency 4 and 20 sources/run |
-| `add-source` | client HTTP; user JWT | `{url:string,client_request_id:uuid}` → `201 {source,subscription}` or `200` existing | request UUID + normalized URL hash; inferred initial limit 5 attempts/device/24h; timeout 8s, response ≤1 MiB |
+| `add-source` | client HTTP; user JWT | `{url,category,language:'en'|'tr',client_request_id}` → `201 {source,subscription}` or `200` existing; category is one of the existing five and feed supplies the display name | request UUID + normalized URL hash; inferred initial limit 5 attempts/device/24h; timeout 8s, response ≤1 MiB |
 | `request-enrichment` | client HTTP; user JWT | `{article_id,client_request_id}` → `200 {status:'ready',summary}` or `202 {status:'queued',poll_after_seconds}` | summary cache key; one job per cache key; 120 cached checks/hour and 30 new misses/device/24h (tunable) |
 | `process-enrichments` | cron/manual; internal secret only | `{max_jobs?:1..3}` → counts `{ready,retried,failed}` | leased job; max attempts/backoff; unique cache key prevents duplicate Claude calls; global daily cap must be configured before production |
 | `build-digest` | cron/manual; internal secret only | `{digest_date?:YYYY-MM-DD,phase:'prepare'|'finalize'}` → `{date,status,item_count,missing_enrichments}` | unique digest date; deterministic rank and positions; finalize is no-op once ready |
@@ -289,8 +289,8 @@ change gets a forward compensating migration.
 | ID / size / deps | Goal; allowed paths (≤12 files); forbidden; measurable acceptance; rollback |
 |---|---|
 | P1 seam / M / — | Add domain DTOs, repository interfaces, env validation, mock adapter and `EXPO_PUBLIC_DATA_MODE` defaulting mock. Allow `src/data-access/**`, `src/config/**`, `.env.example`, `scripts/setup-env.ps1`, package files/tests. Forbid screens/backend/secrets. Acceptance: common three commands + adapter contract tests; bundle scan has no secret names/values. Rollback seam/package additions. |
-| P2 DB / L / — | Create migrations 001–006 + pgTAP RLS tests. Allow `supabase/config.toml`, six migrations, `supabase/tests/database/**`. Forbid app/functions/cron/deploy. Acceptance with Docker: `npx supabase@2.115.0 db reset`, `db lint`, `test db`, then common commands; two-user isolation suite passes. Rollback un-applied files or compensating migration. |
-| P3 feeds / L / P2 | Measure seven candidates first; implement shared URL safety/parser plus `sync-feeds` and `add-source`. Allow those two function dirs, `_shared/{auth,error,url-safety,feed}.ts`, function tests/deno config (≤12). Forbid Claude/client/migrations except later corrective migration. Acceptance: fixtures RSS+Atom, redirects/size/timeouts/dedupe, SSRF matrix, partial-source failure; local `functions serve` smoke; common commands. Rollback functions; disable cron if later wired. |
+| P2 DB / L / — | Create migrations 001–005 + pgTAP RLS tests. Allow `supabase/config.toml`, five migrations, `supabase/tests/database/**`. Forbid app/functions/seed/cron/deploy. Acceptance with Docker: `npx supabase@2.115.0 db reset`, `db lint`, `test db`, then common commands; two-user isolation suite passes. Rollback un-applied files or compensating migration. |
+| P3 feeds / L / P2 | Measure seven candidates first; only then create seed migration 006 and implement shared URL safety/parser plus `sync-feeds` and `add-source`. Allow migration 006, those two function dirs, `_shared/{auth,error,url-safety,feed}.ts`, function tests/deno config (≤12). Forbid Claude/client/other migrations. Acceptance: measured source matrix, fixtures RSS+Atom, redirects/size/timeouts/dedupe, SSRF matrix, partial-source failure; local `functions serve` smoke; common commands. Rollback un-applied seed/functions; disable cron if later wired. |
 | P4 AI / L / P2 | Implement `request-enrichment`, `process-enrichments`, prompt/schema/SDK adapter and job tests. Allow two dirs + `_shared/{anthropic,prompt,schemas,rate-limit,error}.ts` and tests/config. Forbid client key/raw Anthropic fetch/digest/screens. Acceptance: mocked SDK validates 3 bullets, TR no-translation, cache/idempotency/concurrency/retry/rate/cap/prompt-injection; local serve; common commands. Rollback functions and disable worker invocation. |
 | P5 digest+cron / M / P3,P4 | Implement prepare/finalize, migration 007, run observability. Allow `build-digest/**`, migration 007, digest tests, at most one shared ranker. Forbid client/personalization/secrets in SQL. Acceptance: local DB time-controlled test creates one 5-item digest, retries no-op, missing AI stays preparing; inspect `cron.job`; common commands. Rollback unschedule named jobs then compensating migration/function removal. |
 | P6 client data / L / P1,P2 | Add Supabase anonymous auth, Query provider, SQLite/native + web persistence adapters, supabase repositories behind mock flag. Allow `src/data-access/**`, `src/providers/**`, `src/storage/**`, `app/_layout.tsx`, package/app config (≤12 logical files). Forbid screens/theme/notifications/service keys. Acceptance: auth/session/cache hydration, offline cached feed, paused idempotent mutation tests; both data modes compile/export; common commands. Rollback provider wiring/deps, mock stays runnable. |
@@ -299,9 +299,11 @@ change gets a forward compensating migration.
 | P9 onboarding+notifications / L / P5,P6,P8 | Add onboarding guard/source selection, settings/digest integration, local notification service/config. Allow onboarding routes, root guard, settings/digest/sheet, notification/storage service, config/package/tests (≤12). Forbid push tokens/background fetch/server scheduling. Acceptance: permission state tests, save-vs-cancel, schedule-new-before-cancel-old, reconciliation, onboarding atomic/restart/one-source minimum; native device matrix is required before release; common commands. Rollback route/service/config and cancel owned schedules in dev build. |
 | P10 integration gate / M / P5,P7,P8,P9 | Add cross-layer render/route/offline/RLS contract tests, verify env/bundle, switch production builds to Supabase only after authorized remote smoke; mock remains dev/test. Allow test/config/adapter-selection files only (≤12). Forbid feature additions/schema edits/deploy without approval. Acceptance: common commands, local Supabase suite, all Edge contract smokes, secret scan, 390×844 matrix, one iOS + Android run; remote smoke separately authorized. Rollback production flag, leaving mock mode. |
 
-Local backend work **needs measurement** of Docker. Preferred local loop is Docker
-Desktop + `npx supabase@2.115.0 start`; the CLI runs the Edge runtime, so standalone
-Deno is optional for serve but needed for direct `deno fmt/lint/test`. Without Docker
+**Measured environment:** Windows 11 has Node 24/npm 11/EAS, no installed Supabase CLI
+or Deno, and unknown Docker status; the restoring hosted project is treated as empty
+until measured otherwise. Preferred local loop is Docker Desktop +
+`npx supabase@2.115.0 start`; the CLI runs the Edge runtime, so standalone Deno is
+optional for serve but needed for direct `deno fmt/lint/test`. Without Docker
 and Deno, pure adapters can be tested in Node, but SQL/RLS/function integration must be
 deferred to an explicitly authorized remote deploy-and-test; absence of local errors is
 not backend evidence.
