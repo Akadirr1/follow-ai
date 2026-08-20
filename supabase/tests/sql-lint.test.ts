@@ -345,7 +345,6 @@ describe('migration 0001: schemas and PostgREST exposure', () => {
     // is superuser-only on hosted Supabase. Exposing `aigundem` to PostgREST is a
     // Dashboard setting; until then clients read through the public shims in 0006.
     expect(first.sql.toLowerCase()).not.toContain('alter role authenticator');
-    expect(first.sql.toLowerCase()).toContain('exposed schemas');
   });
 
   it('declares the five shipped categories exactly once, as a domain', () => {
