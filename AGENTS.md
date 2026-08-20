@@ -42,12 +42,35 @@ script block at the end first; the markup follows from it).
    Orijinal / Çeviri segmented control.
 3. **Summaries and translations are produced by Claude.** Source: detail card
    footer "Claude ile çevrildi ve özetlendi".
-4. **v1 ships the dark theme only.** Light theme exists on the design board but
-   is outside v1 scope. Source: prototype footnote "Prototip koyu tema sabittir;
-   light tema panoda" and the theme-switch toast.
+4. ~~v1 ships the dark theme only.~~ **Retired 2026-08-21 by the human**
+   ("sınırlandırılmış tema özellikleri … bunlardan kurtulalım"). Light and
+   system themes are in scope; the light palette is on the design board
+   (`design/AI Gündem - Tasarım Panosu.dc.html`, section "04 — LIGHT TEMA":
+   bg `#F4F6FB`, text `#0F1B33`, card `#FFFFFF`, border `#D8E0F0`, soft
+   `#E7EEFB`, accent `#2563EB` unchanged). Dark remains the primary theme per
+   the board header ("Dark theme birincil").
+5. **Backend is Supabase** — the existing project `eglxzbsrewbleqlstefd`
+   ("Akadirr1's Project", eu-west-1, Postgres 17). Edge Functions hold the
+   Anthropic key and do the Claude calls and RSS fetching; Postgres caches
+   articles/summaries; pg_cron builds the morning digest. Source: human decision
+   2026-08-21 (chosen over Expo API Routes and Cloudflare Workers).
+6. **No login in v1: anonymous device identity** (Supabase anonymous
+   sign-in), upgradeable to email/Apple/Google later. Source: human decision
+   2026-08-21.
+7. **Digest reaches the user by a local scheduled notification** at the chosen
+   hour; no server push in v1. Source: human decision 2026-08-21.
+8. **The Anthropic API key never ships in the app bundle** (no `EXPO_PUBLIC_`
+   prefix); only Supabase's URL and publishable (anon) key are client-side.
+   Source: `scripts/setup-env.ps1` header and the human's acceptance of it,
+   2026-08-21.
+9. **Production v1 scope (all four, human-confirmed 2026-08-21):** real RSS for
+   the 7 sources + user-added RSS/URL sources; Claude TR summary (3 bullets) +
+   EN→TR translation, produced server-side and cached; light/system theme +
+   on-device persistence + offline last feed; daily digest + notification
+   permission flow + first-run source-selection onboarding.
 
-Not decided (do not invent): backend or hosting, how RSS is fetched, local
-persistence, accounts/auth, how the Claude calls are keyed and paid for.
+Still not decided (do not invent): app-store accounts and release process,
+payment/quota limits for Claude usage, analytics/crash reporting.
 
 ## Known failure pattern
 
@@ -112,6 +135,11 @@ or app-store accounts), a policy change, deployment, publishing, or anything
 irreversible. Staging, committing, and pushing are separate decisions, each
 scoped to exactly what a human named. First commit `f5127e3` (2026-08-21) was
 human-authorized. Remote `origin` = `git@github.com:Akadirr1/follow-ai.git`
-(added 2026-08-21 on the human's instruction); every push is still a separate,
-human-named decision. Secrets live only in `.env` (gitignored), filled with
+(added 2026-08-21 on the human's instruction). For the production-v1 epic the
+human gave a **standing authorization (2026-08-21)** to commit and push to
+`main` after each independently verified wave; the coordinator records every
+commit in `.orchestrator/journal.md`. Outside that epic, pushes are again
+per-request. No Anthropic API key exists yet: the Claude path must degrade to a
+"summary pending" state, and live Claude behaviour stays **not verified** until
+the human sets the Supabase secret. Secrets live only in `.env` (gitignored), filled with
 `npm run setup:env`; never give an API key an `EXPO_PUBLIC_` prefix.

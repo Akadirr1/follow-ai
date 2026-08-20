@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#070C16;color:#E5EAF2;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#60A5FA;text-decoration:none}a:hover{color:#93C5FD}
+@keyframes shim{0%{background-position:120% 0}100%{background-position:-120% 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
+</style>
+</helmet>
+<section style="padding:52px 60px 40px;border-bottom:1px solid rgba(96,165,250,.09)">
+  <p style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#60A5FA;margin:0 0 8px">AI GÜNDEM · TASARIM PANOSU · v1</p>
+  <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;letter-spacing:-.01em">Kişisel AI Gündem Takip Uygulaması</h1>
+  <p style="margin:0 0 18px;font-size:13px;color:rgba(229,234,242,.6)">Expo SDK 54 · React Native · iOS + Android · 390×844 referans · Dark theme birincil · Tüm metinler Türkçe</p>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+    <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:18px 20px;max-width:520px">
+      <div style="font-size:12px;font-weight:700;color:#93C5FD;margin-bottom:8px">VARSAYIMLAR</div>
+      <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:rgba(229,234,242,.75)">
+        <li>İkonlar: verdiğin 3 PNG <b>olduğu gibi</b> kullanılıyor — dosyalara dokunulmadı; köşe yuvarlama yalnızca ekranda border-radius ile.</li>
+        <li>Arama, tab barda değil — Feed başlığındaki büyüteç ikonundan açılır (brief'te 5 sekme sabit).</li>
+        <li>Palete tek semantik renk eklendi: <b style="color:#E5484D">Danger #E5484D</b> (silme / hata). Diğer roller aynen korundu.</li>
+        <li>Kaynak logoları harf-tile placeholder; haber içerikleri temsili örnek. Tipografi: Inter.</li>
+      </ul>
+    </div>
+    <div style="font-size:13px;line-height:2;color:rgba(229,234,242,.7)">
+      <div style="font-size:12px;font-weight:700;color:#93C5FD">İÇİNDEKİLER</div>
+      <a href="#ds">1 · Design System</a><br>
+      <a href="#ikon">2 · İkon Varlıkları</a><br>
+      <a href="#ekranlar">3 · Ekranlar — Dark</a><br>
+      <a href="#light">4 · Light Tema</a>
+    </div>
+  </div>
+</section>
+
+<section id="ds" style="padding:52px 60px;border-bottom:1px solid rgba(96,165,250,.09)">
+  <p style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#60A5FA;margin:0 0 6px">01 · DESIGN SYSTEM</p>
+  <h2 style="margin:0 0 6px;font-size:22px;font-weight:800">Renk, tipografi, bileşenler</h2>
+  <p style="margin:0;font-size:13px;color:rgba(229,234,242,.6)">Renk rolleri brief'ten aynen. Spacing 4/8/12/16/24/32 · köşe: kart 16, buton 12, chip 999 · min dokunma 44pt.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:26px">
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:#0B1220;border:1px solid rgba(96,165,250,.25)"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Background</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#0B1220</div><div style="font-size:11px;color:rgba(229,234,242,.5)">ana zemin</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:#15233B"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Surface</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#15233B</div><div style="font-size:11px;color:rgba(229,234,242,.5)">kart / ikincil yüzey</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:#2563EB"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Primary</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#2563EB</div><div style="font-size:11px;color:rgba(229,234,242,.5)">buton / aktif</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:#60A5FA"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Accent</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#60A5FA</div><div style="font-size:11px;color:rgba(229,234,242,.5)">link / aktif ikon</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:#BAE6FD"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Light Accent</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#BAE6FD</div><div style="font-size:11px;color:rgba(229,234,242,.5)">rozet / highlight</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:#E5EAF2"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Primary Text</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#E5EAF2</div><div style="font-size:11px;color:rgba(229,234,242,.5)">metin</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:rgba(229,234,242,.7)"></div><div style="font-size:13px;font-weight:600;margin-top:8px">İkincil Metin</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#E5EAF2 · 70%</div><div style="font-size:11px;color:rgba(229,234,242,.5)">meta / açıklama</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:rgba(37,99,235,.2)"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Ayraç / Border</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#2563EB · 20%</div><div style="font-size:11px;color:rgba(229,234,242,.5)">çizgi / kart kenarı</div></div>
+    <div style="width:148px"><div style="height:64px;border-radius:12px;background:#E5484D"></div><div style="font-size:13px;font-weight:600;margin-top:8px">Danger</div><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD">#E5484D</div><div style="font-size:11px;color:rgba(229,234,242,.5)">hata / sil — eklendi</div></div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;margin-top:34px">
+    <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:22px 24px;width:430px">
+      <div style="font-size:12px;font-weight:700;color:#93C5FD;margin-bottom:14px">TİPOGRAFİ — INTER</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px"><span style="font-size:24px;font-weight:800;line-height:1.25">Bugünün AI Gündemi</span><span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);flex:none">Başlık L · 24 Bold</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px"><span style="font-size:20px;font-weight:700">AI Gündem</span><span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);flex:none">Başlık · 20 Bold</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px"><span style="font-size:16px;font-weight:600">Claude'a takım hafızası geldi</span><span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);flex:none">Kart başlığı · 16 SemiBold</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px"><span style="font-size:14px;line-height:1.55;color:rgba(229,234,242,.85)">Model, klinik öncesi aday taramasını haftalardan saatlere indiriyor.</span><span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);flex:none">Gövde · 14 Regular</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="font-size:12px;font-weight:500;color:rgba(229,234,242,.55)">2 saat önce · Modeller · EN→TR</span><span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);flex:none">Meta · 12 Medium</span></div>
+    </div>
+    <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:22px 24px">
+      <div style="font-size:12px;font-weight:700;color:#93C5FD;margin-bottom:14px">SPACING · RADIUS · DOKUNMA</div>
+      <div style="display:flex;align-items:flex-end;gap:16px">
+        <div style="text-align:center"><div style="width:4px;height:4px;background:rgba(96,165,250,.4);border:1px solid #60A5FA;border-radius:2px;margin:0 auto"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">4</div></div>
+        <div style="text-align:center"><div style="width:8px;height:8px;background:rgba(96,165,250,.4);border:1px solid #60A5FA;border-radius:2px;margin:0 auto"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">8</div></div>
+        <div style="text-align:center"><div style="width:12px;height:12px;background:rgba(96,165,250,.4);border:1px solid #60A5FA;border-radius:3px;margin:0 auto"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">12</div></div>
+        <div style="text-align:center"><div style="width:16px;height:16px;background:rgba(96,165,250,.4);border:1px solid #60A5FA;border-radius:4px;margin:0 auto"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">16</div></div>
+        <div style="text-align:center"><div style="width:24px;height:24px;background:rgba(96,165,250,.4);border:1px solid #60A5FA;border-radius:5px;margin:0 auto"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">24</div></div>
+        <div style="text-align:center"><div style="width:32px;height:32px;background:rgba(96,165,250,.4);border:1px solid #60A5FA;border-radius:6px;margin:0 auto"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">32</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:16px;margin-top:22px">
+        <div style="text-align:center"><div style="width:76px;height:56px;background:#0E1930;border:1px solid rgba(37,99,235,.4);border-radius:16px"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">kart · 16</div></div>
+        <div style="text-align:center"><div style="width:76px;height:44px;background:#2563EB;border-radius:12px"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">buton · 12</div></div>
+        <div style="text-align:center"><div style="width:76px;height:32px;background:#0E1930;border:1px solid rgba(37,99,235,.4);border-radius:999px"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">chip · 999</div></div>
+        <div style="text-align:center"><div style="width:44px;height:44px;border:1.5px dashed rgba(96,165,250,.6);border-radius:10px"></div><div style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5);margin-top:6px">min 44pt</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:22px 24px;margin-top:28px;max-width:900px">
+    <div style="font-size:12px;font-weight:700;color:#93C5FD;margin-bottom:16px">BİLEŞENLER</div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+      <span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);width:96px;flex:none">Butonlar</span>
+      <div style="height:48px;padding:0 20px;background:#2563EB;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#fff">Kaynağa git <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M19 13.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6.5A1.5 1.5 0 0 1 5 5h5.5"></path></svg></div>
+      <div style="height:48px;padding:0 20px;border:1px solid rgba(37,99,235,.5);border-radius:12px;display:flex;align-items:center;font-size:15px;font-weight:600;color:#60A5FA">Tekrar dene</div>
+      <div style="height:48px;padding:0 16px;border-radius:12px;display:flex;align-items:center;font-size:15px;font-weight:600;color:rgba(229,234,242,.7)">Vazgeç</div>
+      <div style="height:48px;padding:0 20px;background:#2563EB;border-radius:12px;display:flex;align-items:center;font-size:15px;font-weight:600;color:#fff;opacity:.45">Devre dışı</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+      <span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);width:96px;flex:none">Chip / rozet</span>
+      <span style="height:34px;padding:0 14px;background:#2563EB;border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff">Tümü</span>
+      <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75)">Araştırma</span>
+      <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px">Modeller</span>
+      <span style="background:#BAE6FD;color:#0B1220;font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px">5 yeni</span>
+      <span style="background:rgba(96,165,250,.14);color:#60A5FA;font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px">EN→TR</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+      <span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);width:96px;flex:none">Form</span>
+      <div style="width:250px;height:44px;background:#0E1930;border:1px solid rgba(37,99,235,.35);border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 14px;color:rgba(229,234,242,.45);font-size:14px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg>AI gündeminde ara…</div>
+      <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+      <div style="width:46px;height:28px;background:#1B2B47;border:1px solid rgba(37,99,235,.3);border-radius:999px;position:relative"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;background:rgba(229,234,242,.6);border-radius:50%"></div></div>
+      <div style="display:flex;background:#0E1930;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:3px">
+        <span style="padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6)">Orijinal</span>
+        <span style="padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;background:#2563EB;color:#fff">Çeviri</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45);width:96px;flex:none">Skeleton</span>
+      <div style="width:210px;height:14px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite;border-radius:8px"></div>
+      <div style="width:120px;height:14px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite;border-radius:8px"></div>
+      <span style="font:10px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.45)">shimmer 1.5s</span>
+    </div>
+  </div>
+</section>
+<section id="ikon" style="padding:52px 60px;border-bottom:1px solid rgba(96,165,250,.09)">
+  <p style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#60A5FA;margin:0 0 6px">02 · İKON VARLIKLARI</p>
+  <h2 style="margin:0 0 6px;font-size:22px;font-weight:800">Verdiğin PNG'ler — olduğu gibi</h2>
+  <p style="margin:0;font-size:13px;color:rgba(229,234,242,.6);max-width:740px">Dosyalara dokunulmadı. Uygulama içinde köşeler yalnızca görüntüleme sırasında border-radius (~%23) ile maskelenir; iOS/Android app icon köşelerini zaten OS maskeler.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:24px;margin-top:28px;align-items:flex-start">
+    <div style="text-align:center"><img src="uploads/ikon1.png" width="140" height="140" style="border-radius:32px" alt="ikon1"><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD;margin-top:10px">ikon1.png</div><div style="font-size:11px;color:rgba(229,234,242,.5);margin-top:2px">Mavi zemin · maskot / rozet</div></div>
+    <div style="text-align:center"><img src="uploads/ikon2.png" width="140" height="140" style="border-radius:32px" alt="ikon2"><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD;margin-top:10px">ikon2.png</div><div style="font-size:11px;color:rgba(229,234,242,.5);margin-top:2px"><b style="color:#BAE6FD">BİRİNCİL</b> · app icon + splash</div></div>
+    <div style="text-align:center"><img src="uploads/ikon3.png" width="140" height="140" style="border-radius:32px" alt="ikon3"><div style="font:11px ui-monospace,Menlo,monospace;color:#93C5FD;margin-top:10px">ikon3.png</div><div style="font-size:11px;color:rgba(229,234,242,.5);margin-top:2px">Koyu zemin · dark tema, uygulama içi</div></div>
+    <div style="text-align:center"><div style="width:140px;height:140px;background:#0B1220;border:1px solid rgba(96,165,250,.25);border-radius:20px;display:flex;align-items:center;justify-content:center"><img src="uploads/ikon2.png" width="76" height="76" style="border-radius:17px" alt="splash önizleme"></div><div style="font-size:11px;color:rgba(229,234,242,.5);margin-top:10px">Splash önizleme<br>ikon ~256px · bg #0B1220</div></div>
+    <pre style="margin:0;background:#0E1930;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:16px 18px;font:12px/1.7 ui-monospace,Menlo,monospace;color:#93C5FD">"icon": "./assets/ikon2.png",
+"splash": {
+  "image": "./assets/ikon2.png",
+  "resizeMode": "contain",
+  "backgroundColor": "#0B1220"
+},
+"android": {
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/ikon2.png",
+    "backgroundColor": "#0B1220"
+  }
+}</pre>
+  </div>
+</section>
+<section id="ekranlar" style="padding:52px 60px;border-bottom:1px solid rgba(96,165,250,.09)">
+  <p style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#60A5FA;margin:0 0 6px">03 · EKRANLAR — DARK</p>
+  <h2 style="margin:0 0 6px;font-size:22px;font-weight:800">16 frame · dolu / boş / yükleniyor / hata</h2>
+  <p style="margin:0 0 30px;font-size:13px;color:rgba(229,234,242,.6)">Üst safe area 54px · tab bar 56px + alt safe area · birincil aksiyonlar başparmak bölgesinde.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+    <div data-screen-label="1 Splash" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">1</span><span style="font-size:13px;font-weight:600">Splash</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+          <img src="uploads/ikon2.png" width="210" height="210" style="border-radius:48px;box-shadow:0 0 90px rgba(37,99,235,.35)" alt="AI Gündem">
+          <div style="font-size:26px;font-weight:800;letter-spacing:-.01em">AI Gündem</div>
+          <div style="font-size:13px;color:rgba(229,234,242,.55);margin-top:-12px">Kişisel yapay zekâ gündemin</div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <div style="width:8px;height:8px;background:#60A5FA;animation:blink 1.2s infinite"></div>
+            <div style="width:8px;height:8px;background:#60A5FA;animation:blink 1.2s .2s infinite"></div>
+            <div style="width:8px;height:8px;background:#60A5FA;animation:blink 1.2s .4s infinite"></div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:20px;left:0;right:0;text-align:center;font:11px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.3)">v1.0</div>
+      </div>
+    </div>
+
+    <div data-screen-label="2a Feed dolu" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">2a</span><span style="font-size:13px;font-weight:600">Feed — dolu</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0;display:flex;align-items:center;gap:10px">
+          <img src="uploads/ikon3.png" width="34" height="34" style="border-radius:9px;border:1px solid rgba(96,165,250,.3)" alt="">
+          <div style="flex:1"><div style="font-size:20px;font-weight:800">AI Gündem</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Perşembe, 20 Ağustos · <span style="color:#60A5FA;font-weight:600">12 yeni</span></div></div>
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg></div>
+        </div>
+        <div style="display:flex;gap:8px;padding:14px 0 12px 20px;overflow:hidden">
+          <span style="height:34px;padding:0 14px;background:#2563EB;border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff;flex:none">Tümü</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75);flex:none">Modeller</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75);flex:none">Araştırma</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75);flex:none">Ürün</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75);flex:none">Açık Kaynak</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:2px 16px 130px">
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.22)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">OA</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">OpenAI Blog</div><div style="font-size:12px;color:rgba(229,234,242,.55)">2 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Modeller</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">GPT-5.2 tanıtıldı: iki kat bağlam penceresi, yarı fiyat</div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.22)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">AN</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Anthropic</div><div style="font-size:12px;color:rgba(229,234,242,.55)">4 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Ürün</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">Claude'a takım hafızası geldi: projeler arası kalıcı bağlam</div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.22)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">GD</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Google DeepMind</div><div style="font-size:12px;color:rgba(229,234,242,.55)">6 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Araştırma</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">AlphaFold 4, ilaç etkileşimlerini %30 daha isabetli öngörüyor</div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.22)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">HF</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Hugging Face</div><div style="font-size:12px;color:rgba(229,234,242,.55)">8 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Açık Kaynak</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">Mistral-Nano 12B açık ağırlıkla yayınlandı — telefonda çalışıyor</div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.22)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">WZ</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Webrazzi</div><div style="font-size:12px;color:rgba(229,234,242,.55)">dün · TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Türkiye</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">TÜBİTAK destekli Türkçe LLM konsorsiyumu ilk modelini duyurdu</div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:600">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="2b Feed loading" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">2b</span><span style="font-size:13px;font-weight:600">Feed — yükleniyor</span><span style="font-size:11px;color:rgba(229,234,242,.5)">skeleton + shimmer</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0;display:flex;align-items:center;gap:10px">
+          <img src="uploads/ikon3.png" width="34" height="34" style="border-radius:9px;border:1px solid rgba(96,165,250,.3)" alt="">
+          <div style="flex:1"><div style="font-size:20px;font-weight:800">AI Gündem</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Yenileniyor…</div></div>
+          <div style="width:22px;height:22px;border:2.5px solid rgba(96,165,250,.25);border-top-color:#60A5FA;border-radius:50%;animation:spin 1s linear infinite;margin-right:10px"></div>
+        </div>
+        <div style="display:flex;gap:8px;padding:14px 0 12px 20px;overflow:hidden">
+          <span style="height:34px;padding:0 14px;background:#2563EB;border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff;flex:none">Tümü</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75);flex:none">Modeller</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75);flex:none">Araştırma</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.4);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(229,234,242,.75);flex:none">Ürün</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:2px 16px">
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.14);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div><div style="display:flex;flex-direction:column;gap:6px;flex:1"><div style="width:110px;height:11px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div><div style="width:70px;height:9px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div></div><div style="width:64px;height:24px;border-radius:999px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div></div>
+            <div style="width:100%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+            <div style="width:66%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.14);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div><div style="display:flex;flex-direction:column;gap:6px;flex:1"><div style="width:130px;height:11px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div><div style="width:80px;height:9px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div></div><div style="width:64px;height:24px;border-radius:999px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div></div>
+            <div style="width:100%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+            <div style="width:80%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.14);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div><div style="display:flex;flex-direction:column;gap:6px;flex:1"><div style="width:96px;height:11px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div><div style="width:60px;height:9px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div></div></div>
+            <div style="width:100%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+            <div style="width:52%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:600">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="2c Feed bos" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">2c</span><span style="font-size:13px;font-weight:600">Feed — boş</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0;display:flex;align-items:center;gap:10px">
+          <img src="uploads/ikon3.png" width="34" height="34" style="border-radius:9px;border:1px solid rgba(96,165,250,.3)" alt="">
+          <div style="flex:1"><div style="font-size:20px;font-weight:800">AI Gündem</div></div>
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg></div>
+        </div>
+        <div style="position:absolute;inset:120px 0 120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 48px;text-align:center">
+          <img src="uploads/ikon1.png" width="104" height="104" style="border-radius:24px;margin-bottom:10px;box-shadow:0 8px 32px rgba(37,99,235,.3)" alt="">
+          <div style="font-size:17px;font-weight:700">Henüz haber yok</div>
+          <div style="font-size:14px;line-height:1.6;color:rgba(229,234,242,.6)">Kaynaklarını kontrol et — açık kaynak sayısı arttıkça feed dolacak.</div>
+          <div style="height:48px;padding:0 22px;border:1px solid rgba(37,99,235,.5);border-radius:12px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#60A5FA;margin-top:14px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg>Kaynaklara git</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:600">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="2d Feed hata" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">2d</span><span style="font-size:13px;font-weight:600">Feed — hata</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0;display:flex;align-items:center;gap:10px">
+          <img src="uploads/ikon3.png" width="34" height="34" style="border-radius:9px;border:1px solid rgba(96,165,250,.3)" alt="">
+          <div style="flex:1"><div style="font-size:20px;font-weight:800">AI Gündem</div></div>
+        </div>
+        <div style="position:absolute;inset:120px 0 120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 48px;text-align:center">
+          <div style="position:relative;margin-bottom:10px"><img src="uploads/ikon1.png" width="104" height="104" style="border-radius:24px;filter:saturate(.4) brightness(.8)" alt=""><div style="position:absolute;right:-8px;top:-8px;width:34px;height:34px;background:#E5484D;border:3px solid #0B1220;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+          <div style="font-size:17px;font-weight:700">Bağlantı hatası</div>
+          <div style="font-size:14px;line-height:1.6;color:rgba(229,234,242,.6)">İçerikler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.</div>
+          <div style="height:48px;padding:0 24px;background:#2563EB;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#fff;margin-top:14px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.7-6"></path><path d="M20 3.5V8h-4.5"></path></svg>Tekrar dene</div>
+          <div style="font-size:12px;color:rgba(229,234,242,.4);margin-top:6px">Son deneme: 9:41</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:600">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="3a Makale Detay" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">3a</span><span style="font-size:13px;font-weight:600">Makale Detay — çeviri</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:10px">
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18.5L8.5 12 15 5.5"></path></svg></div>
+          <div style="flex:1;text-align:center"><div style="font-size:14px;font-weight:600">Google DeepMind</div><div style="font-size:11px;color:rgba(229,234,242,.5)">6 saat önce</div></div>
+          <div style="width:44px;height:44px;background:rgba(96,165,250,.14);border:1px solid rgba(37,99,235,.45);border-radius:13px;display:flex;align-items:center;justify-content:center;color:#60A5FA"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg></div>
+        </div>
+        <div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px">Araştırma</span><span style="background:rgba(96,165,250,.14);color:#60A5FA;font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px">EN→TR</span></div>
+          <div style="font-size:21px;font-weight:800;line-height:1.3;letter-spacing:-.01em">AlphaFold 4, ilaç etkileşimlerini %30 daha isabetli öngörüyor</div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.35);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.25)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg>
+              <span style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.12em;color:#60A5FA">AI TR ÖZET</span>
+              <span style="background:#BAE6FD;color:#0B1220;font-size:10px;font-weight:700;border-radius:999px;padding:3px 8px;margin-left:auto">3 madde</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start"><div style="width:6px;height:6px;background:#60A5FA;flex:none;margin-top:7px"></div><div style="font-size:14px;line-height:1.55;color:rgba(229,234,242,.92)">Protein–ilaç etkileşim tahminlerinde önceki sürüme göre %30 daha isabetli.</div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start"><div style="width:6px;height:6px;background:#60A5FA;flex:none;margin-top:7px"></div><div style="font-size:14px;line-height:1.55;color:rgba(229,234,242,.92)">Klinik öncesi aday taraması haftalardan saatlere iniyor.</div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start"><div style="width:6px;height:6px;background:#60A5FA;flex:none;margin-top:7px"></div><div style="font-size:14px;line-height:1.55;color:rgba(229,234,242,.92)">Ağırlıklar akademik kullanım için önümüzdeki ay açılacak.</div></div>
+            <div style="font-size:11px;color:rgba(229,234,242,.45);border-top:1px solid rgba(37,99,235,.2);padding-top:10px">Claude ile çevrildi ve özetlendi · 09:41</div>
+          </div>
+          <div style="display:flex;background:#0E1930;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:3px;align-self:flex-start">
+            <span style="padding:8px 18px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6)">Orijinal</span>
+            <span style="padding:8px 18px;border-radius:9px;font-size:13px;font-weight:600;background:#2563EB;color:#fff">Çeviri</span>
+          </div>
+          <div style="font-size:14px;line-height:1.65;color:rgba(229,234,242,.8)">DeepMind ekibi, AlphaFold 4'ün yalnızca protein yapısını değil, küçük molekül etkileşimlerini de tek geçişte modellediğini açıkladı. Yeni mimari, bağlanma afinitesi tahminlerinde bağımsız kıyaslamalarda öne çıktı…</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 34px;background:linear-gradient(180deg,rgba(11,18,32,0),rgba(11,18,32,.96) 45%);z-index:30">
+          <div style="height:50px;background:#2563EB;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;color:#fff;box-shadow:0 6px 20px rgba(37,99,235,.35)">Kaynağa git <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M19 13.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6.5A1.5 1.5 0 0 1 5 5h5.5"></path></svg></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="3b Detay loading" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">3b</span><span style="font-size:13px;font-weight:600">Detay — çevriliyor</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:10px">
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18.5L8.5 12 15 5.5"></path></svg></div>
+          <div style="flex:1;text-align:center"><div style="font-size:14px;font-weight:600">Google DeepMind</div></div>
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center;color:rgba(229,234,242,.6)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg></div>
+        </div>
+        <div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:14px">
+          <div style="width:90px;height:26px;border-radius:999px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          <div style="width:100%;height:20px;border-radius:8px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          <div style="width:72%;height:20px;border-radius:8px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.25);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px">
+            <div style="width:30px;height:30px;border:3px solid rgba(96,165,250,.2);border-top-color:#60A5FA;border-radius:50%;animation:spin 1s linear infinite"></div>
+            <div style="font-size:14px;font-weight:600;color:#60A5FA">Çevriliyor…</div>
+            <div style="font-size:12px;color:rgba(229,234,242,.5)">AI özet hazırlanıyor, birkaç saniye sürebilir</div>
+            <div style="width:100%;height:12px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+            <div style="width:100%;height:12px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+            <div style="width:60%;height:12px;border-radius:6px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite;align-self:flex-start"></div>
+          </div>
+          <div style="width:100%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          <div style="width:100%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+          <div style="width:44%;height:13px;border-radius:7px;background:linear-gradient(90deg,#16243E 30%,#22345C 50%,#16243E 70%);background-size:200% 100%;animation:shim 1.5s linear infinite"></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 34px;z-index:30">
+          <div style="height:50px;background:#2563EB;opacity:.4;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff">Kaynağa git</div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="4a Digest" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">4a</span><span style="font-size:13px;font-weight:600">Günlük Digest</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:16px 20px 0;display:flex;align-items:flex-start;gap:12px">
+          <div style="flex:1">
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#60A5FA">20 AĞUSTOS 2026 · PERŞEMBE</div>
+            <div style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin-top:6px">Bugünün AI Gündemi</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><span style="background:#BAE6FD;color:#0B1220;font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px">Hazır · 08:00</span><span style="font-size:12px;color:rgba(229,234,242,.55)">5 haber · ~3 dk</span></div>
+          </div>
+          <img src="uploads/ikon1.png" width="56" height="56" style="border-radius:14px;box-shadow:0 4px 18px rgba(37,99,235,.35)" alt="">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:18px 16px 130px">
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:34px;height:34px;border-radius:10px;background:#BAE6FD;color:#0B1220;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">01</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">GPT-5.2 tanıtıldı: iki kat bağlam, yarı fiyat</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">API fiyatı token başına %50 düştü; 2M bağlam penceresi standart oldu.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">OpenAI Blog · Modeller</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">02</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">AlphaFold 4 ilaç keşfini hızlandırıyor</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">Etkileşim tahminlerinde %30 isabet artışı; ağırlıklar akademiye açılıyor.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">Google DeepMind · Araştırma</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">03</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">Mistral-Nano 12B telefonda çalışıyor</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">Açık ağırlıklı model, orta segment cihazlarda 30 token/sn üretiyor.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">Hugging Face · Açık Kaynak</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">04</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">AB Yapay Zekâ Yasası'nda ikinci faz</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">Genel amaçlı modeller için şeffaflık yükümlülükleri yürürlükte.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">TechCrunch AI · Ürün</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">05</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">Türkçe LLM konsorsiyumundan ilk model</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">TÜBİTAK destekli 7B model, Türkçe kıyaslamalarda açık ara önde.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">Webrazzi · Türkiye</div></div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:500">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:600">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="4b Digest bos" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">4b</span><span style="font-size:13px;font-weight:600">Digest — boş</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:16px 20px 0">
+          <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#60A5FA">20 AĞUSTOS 2026 · PERŞEMBE</div>
+          <div style="font-size:24px;font-weight:800;margin-top:6px">Bugünün AI Gündemi</div>
+        </div>
+        <div style="position:absolute;inset:150px 0 120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 48px;text-align:center">
+          <img src="uploads/ikon1.png" width="104" height="104" style="border-radius:24px;margin-bottom:10px;opacity:.85" alt="">
+          <div style="font-size:17px;font-weight:700">Bugün için özet hazır değil</div>
+          <div style="font-size:14px;line-height:1.6;color:rgba(229,234,242,.6)">Digest her sabah 08:00'de otomatik oluşturulur.</div>
+          <div style="height:48px;padding:0 22px;border:1px solid rgba(37,99,235,.5);border-radius:12px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#60A5FA;margin-top:14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg>Şimdi oluştur</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:500">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:600">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="5a Kaydedilenler" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">5a</span><span style="font-size:13px;font-weight:600">Kaydedilenler</span><span style="font-size:11px;color:rgba(229,234,242,.5)">2. kart: swipe-to-delete</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0">
+          <div style="font-size:21px;font-weight:800">Kaydedilenler</div>
+          <div style="font-size:12px;color:rgba(229,234,242,.55);margin-top:2px">3 kayıt · <span style="color:#60A5FA;font-weight:600">2 okunmadı</span></div>
+        </div>
+        <div style="display:flex;background:#0E1930;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:3px;margin:14px 20px 0;align-self:flex-start;width:fit-content">
+          <span style="padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;background:#2563EB;color:#fff">Tümü</span>
+          <span style="padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6)">Okunmadı</span>
+          <span style="padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6)">Okundu</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:16px 16px 130px">
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:8px;height:8px;background:#60A5FA;border-radius:50%;flex:none"></div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Google DeepMind</div><div style="font-size:12px;color:rgba(229,234,242,.55)">6 saat önce kaydedildi</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Araştırma</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">AlphaFold 4, ilaç etkileşimlerini %30 daha isabetli öngörüyor</div>
+          </div>
+          <div style="position:relative;border-radius:16px;overflow:hidden">
+            <div style="position:absolute;inset:0;background:#E5484D;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;gap:6px;flex-direction:column;row-gap:4px;justify-content:center;align-items:flex-end"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l.8 13h9.4l.8-13"></path></svg><span style="font-size:12px;font-weight:700;color:#fff">Sil</span></div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;transform:translateX(-92px);box-shadow:8px 0 24px rgba(0,0,0,.35)">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:8px;height:8px;background:#60A5FA;border-radius:50%;flex:none"></div>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Hugging Face</div><div style="font-size:12px;color:rgba(229,234,242,.55)">dün kaydedildi</div></div>
+                <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Açık Kaynak</span>
+              </div>
+              <div style="font-size:16px;font-weight:600;line-height:1.4">Mistral-Nano 12B açık ağırlıkla yayınlandı</div>
+            </div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.12);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;opacity:.62">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4.5 12.5l5 5L19.5 7"></path></svg>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">OpenAI Blog</div><div style="font-size:12px;color:rgba(229,234,242,.55)">2 gün önce · okundu</div></div>
+              <span style="font-size:11px;font-weight:600;color:rgba(229,234,242,.5);border:1px solid rgba(37,99,235,.25);border-radius:999px;padding:4px 10px;flex:none">Modeller</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">GPT-5.2 tanıtıldı: iki kat bağlam penceresi, yarı fiyat</div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:500">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:600">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="5b Kaydedilenler bos" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">5b</span><span style="font-size:13px;font-weight:600">Kaydedilenler — boş</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0"><div style="font-size:21px;font-weight:800">Kaydedilenler</div></div>
+        <div style="position:absolute;inset:120px 0 120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:0 48px;text-align:center">
+          <img src="uploads/ikon1.png" width="104" height="104" style="border-radius:24px;margin-bottom:10px;opacity:.85" alt="">
+          <div style="font-size:17px;font-weight:700">Kaydedilen haber yok</div>
+          <div style="font-size:14px;line-height:1.6;color:rgba(229,234,242,.6);display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:center">Bir haberi kaydetmek için<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.8" stroke-linejoin="round" style="margin:0 1px"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg>simgesine dokun.</div>
+          <div style="height:48px;padding:0 22px;border:1px solid rgba(37,99,235,.5);border-radius:12px;display:flex;align-items:center;font-size:15px;font-weight:600;color:#60A5FA;margin-top:14px">Feed'e dön</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:500">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:600">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="6a Arama sonuc" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">6a</span><span style="font-size:13px;font-weight:600">Arama — sonuçlar</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:10px">
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18.5L8.5 12 15 5.5"></path></svg></div>
+          <div style="flex:1;height:44px;background:#0E1930;border:1px solid #2563EB;border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:14px">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.8" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg>
+            <span style="flex:1">alphafold<span style="display:inline-block;width:1.5px;height:16px;background:#60A5FA;vertical-align:-3px;margin-left:1px"></span></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.5)" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+          </div>
+        </div>
+        <div style="padding:16px 20px 8px;font-size:12px;color:rgba(229,234,242,.55)">2 sonuç · "alphafold"</div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:0 16px">
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">GD</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Google DeepMind</div><div style="font-size:12px;color:rgba(229,234,242,.55)">6 saat önce</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Araştırma</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4"><span style="background:rgba(96,165,250,.25);border-radius:4px;padding:0 2px">AlphaFold</span> 4, ilaç etkileşimlerini %30 daha isabetli öngörüyor</div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">AX</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">arXiv cs.AI</div><div style="font-size:12px;color:rgba(229,234,242,.55)">3 gün önce</div></div>
+              <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">Araştırma</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4"><span style="background:rgba(96,165,250,.25);border-radius:4px;padding:0 2px">AlphaFold</span> tabanlı enzim tasarımında yeni yöntem önerildi</div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="6b Arama bos" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">6b</span><span style="font-size:13px;font-weight:600">Arama — boş + son aramalar</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:10px">
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18.5L8.5 12 15 5.5"></path></svg></div>
+          <div style="flex:1;height:44px;background:#0E1930;border:1px solid rgba(37,99,235,.35);border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:14px;color:rgba(229,234,242,.45)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg>
+            AI gündeminde ara…
+          </div>
+        </div>
+        <div style="padding:24px 20px 0">
+          <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:6px">SON ARAMALAR</div>
+          <div style="display:flex;align-items:center;gap:12px;height:48px;border-bottom:1px solid rgba(37,99,235,.14)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.45)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span style="flex:1;font-size:14px">gpt-5.2</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+          <div style="display:flex;align-items:center;gap:12px;height:48px;border-bottom:1px solid rgba(37,99,235,.14)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.45)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span style="flex:1;font-size:14px">türkçe llm</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+          <div style="display:flex;align-items:center;gap:12px;height:48px;border-bottom:1px solid rgba(37,99,235,.14)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.45)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span style="flex:1;font-size:14px">açık kaynak ajanlar</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:120px;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 48px;text-align:center">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(96,165,250,.5)" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg>
+          <div style="font-size:14px;color:rgba(229,234,242,.55)">Aramak için yaz — başlık, kaynak veya kategori.</div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="7 Kaynaklar" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">7</span><span style="font-size:13px;font-weight:600">Kaynaklar</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0">
+          <div style="font-size:21px;font-weight:800">Kaynaklar</div>
+          <div style="font-size:12px;color:rgba(229,234,242,.55);margin-top:2px">7 kaynak · <span style="color:#60A5FA;font-weight:600">6 aktif</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;padding:10px 20px 130px">
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14)">
+            <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">OA</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">OpenAI Blog</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Modeller · EN</div></div>
+            <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14)">
+            <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">AN</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">Anthropic</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Ürün · EN</div></div>
+            <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14)">
+            <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">GD</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">Google DeepMind</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Araştırma · EN</div></div>
+            <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14)">
+            <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">HF</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">Hugging Face</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Açık Kaynak · EN</div></div>
+            <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14)">
+            <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">AX</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">arXiv cs.AI</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Araştırma · EN</div></div>
+            <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14);opacity:.55">
+            <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">TC</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">TechCrunch AI</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Ürün · EN · kapalı</div></div>
+            <div style="width:46px;height:28px;background:#1B2B47;border:1px solid rgba(37,99,235,.3);border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;background:rgba(229,234,242,.6);border-radius:50%"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14)">
+            <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">WZ</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">Webrazzi AI</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Türkiye · TR · çeviri yok</div></div>
+            <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+          </div>
+          <div style="height:50px;border:1.5px dashed rgba(37,99,235,.5);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;color:#60A5FA;margin-top:16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Yeni kaynak ekle (RSS / URL)</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:500">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:600">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="8a Ayarlar" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">8a</span><span style="font-size:13px;font-weight:600">Ayarlar</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0"><div style="font-size:21px;font-weight:800">Ayarlar</div></div>
+        <div style="display:flex;flex-direction:column;gap:18px;padding:16px 20px 130px">
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">ÇEVİRİ</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:2px 16px">
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1"><div style="font-size:15px;font-weight:600">Otomatik çeviri</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Yabancı içerik Türkçeye çevrilir</div></div>
+                <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.14)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Özet uzunluğu</div>
+                <span style="font-size:14px;color:rgba(229,234,242,.55)">Orta</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">GÜNLÜK DIGEST</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:2px 16px">
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Digest saati</div>
+                <span style="background:rgba(96,165,250,.14);color:#60A5FA;font:700 13px ui-monospace,Menlo,monospace;border-radius:8px;padding:5px 10px">08:00</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.14)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1"><div style="font-size:15px;font-weight:600">Digest bildirimi</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Hazır olunca haber ver</div></div>
+                <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">GÖRÜNÜM</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+              <div style="flex:1;font-size:15px;font-weight:600">Tema</div>
+              <div style="display:flex;background:#0E1930;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:3px">
+                <span style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;background:#2563EB;color:#fff;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 13.5A8 8 0 1 1 10.5 4 6.5 6.5 0 0 0 20 13.5z"></path></svg>Koyu</span>
+                <span style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6)">Açık</span>
+                <span style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6)">Sistem</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">HAKKINDA</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:2px 16px">
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Hakkında</div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.14)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Sürüm</div>
+                <span style="font:12px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5)">1.0.0 · Expo SDK 54</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:500">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(229,234,242,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#60A5FA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:600">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="8b Ayarlar time picker" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">8b</span><span style="font-size:13px;font-weight:600">Digest saati — time picker</span></div>
+      <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+        <div style="padding:14px 20px 0"><div style="font-size:21px;font-weight:800">Ayarlar</div></div>
+        <div style="position:absolute;inset:0;background:rgba(4,8,16,.62);z-index:45"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#15233B;border-radius:24px 24px 0 0;border-top:1px solid rgba(96,165,250,.25);padding:10px 20px 40px;z-index:50">
+          <div style="width:40px;height:4px;background:rgba(229,234,242,.25);border-radius:2px;margin:0 auto 14px"></div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:4px">Digest saati</div>
+          <div style="font-size:13px;color:rgba(229,234,242,.55);margin-bottom:16px">Günlük özet her gün bu saatte hazırlanır.</div>
+          <div style="position:relative;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0">
+            <div style="position:absolute;left:16px;right:16px;top:50px;height:50px;background:rgba(37,99,235,.18);border:1px solid rgba(37,99,235,.4);border-radius:12px"></div>
+            <div style="height:50px;display:flex;align-items:center;font:600 20px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.35)">07:30</div>
+            <div style="height:50px;display:flex;align-items:center;font:800 26px ui-monospace,Menlo,monospace;color:#E5EAF2;position:relative;z-index:2">08:00</div>
+            <div style="height:50px;display:flex;align-items:center;font:600 20px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.35)">08:30</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:18px">
+            <div style="flex:1;height:50px;border:1px solid rgba(37,99,235,.4);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:rgba(229,234,242,.75)">Vazgeç</div>
+            <div style="flex:1;height:50px;background:#2563EB;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff">Kaydet</div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.5);z-index:55"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="light" style="padding:52px 60px;border-bottom:1px solid rgba(96,165,250,.09)">
+  <p style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.16em;color:#60A5FA;margin:0 0 6px">04 · LIGHT TEMA</p>
+  <h2 style="margin:0 0 6px;font-size:22px;font-weight:800">Aynı roller, açık karşılıklar</h2>
+  <p style="margin:0 0 30px;font-size:13px;color:rgba(229,234,242,.6)">Background #F4F6FB · Surface #FFFFFF · Text #0F1B33 · ikincil %60 · ayraç #2563EB %13 · Primary/Accent aynı kalır.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+    <div data-screen-label="9a Feed light" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">9a</span><span style="font-size:13px;font-weight:600">Feed — light</span></div>
+      <div style="width:390px;height:844px;background:#F4F6FB;border-radius:46px;border:1px solid #D8E0F0;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden;position:relative;flex:none;color:#0F1B33">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#0F1B33"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#0F1B33"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#0F1B33"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#0F1B33" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#0F1B33"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#0F1B33" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#0F1B33"></rect></svg></div>
+        <div style="padding:14px 20px 0;display:flex;align-items:center;gap:10px">
+          <img src="uploads/ikon1.png" width="34" height="34" style="border-radius:9px" alt="">
+          <div style="flex:1"><div style="font-size:20px;font-weight:800">AI Gündem</div><div style="font-size:12px;color:rgba(15,27,51,.6)">Perşembe, 20 Ağustos · <span style="color:#2563EB;font-weight:600">12 yeni</span></div></div>
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.3);border-radius:13px;display:flex;align-items:center;justify-content:center;background:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0F1B33" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg></div>
+        </div>
+        <div style="display:flex;gap:8px;padding:14px 0 12px 20px;overflow:hidden">
+          <span style="height:34px;padding:0 14px;background:#2563EB;border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:#fff;flex:none">Tümü</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.35);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(15,27,51,.75);background:#fff;flex:none">Modeller</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.35);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(15,27,51,.75);background:#fff;flex:none">Araştırma</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.35);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(15,27,51,.75);background:#fff;flex:none">Ürün</span>
+          <span style="height:34px;padding:0 14px;border:1px solid rgba(37,99,235,.35);border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:500;color:rgba(15,27,51,.75);background:#fff;flex:none">Açık Kaynak</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:2px 16px 130px">
+          <div style="background:#fff;border:1px solid rgba(37,99,235,.13);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(15,27,51,.06)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#E7EEFB;border:1px solid rgba(37,99,235,.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#2563EB;flex:none">OA</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">OpenAI Blog</div><div style="font-size:12px;color:rgba(15,27,51,.55)">2 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#2563EB;border:1px solid rgba(37,99,235,.35);border-radius:999px;padding:4px 10px;flex:none">Modeller</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">GPT-5.2 tanıtıldı: iki kat bağlam penceresi, yarı fiyat</div>
+          </div>
+          <div style="background:#fff;border:1px solid rgba(37,99,235,.13);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(15,27,51,.06)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#E7EEFB;border:1px solid rgba(37,99,235,.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#2563EB;flex:none">AN</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Anthropic</div><div style="font-size:12px;color:rgba(15,27,51,.55)">4 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#2563EB;border:1px solid rgba(37,99,235,.35);border-radius:999px;padding:4px 10px;flex:none">Ürün</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">Claude'a takım hafızası geldi: projeler arası kalıcı bağlam</div>
+          </div>
+          <div style="background:#fff;border:1px solid rgba(37,99,235,.13);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(15,27,51,.06)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#E7EEFB;border:1px solid rgba(37,99,235,.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#2563EB;flex:none">GD</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Google DeepMind</div><div style="font-size:12px;color:rgba(15,27,51,.55)">6 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#2563EB;border:1px solid rgba(37,99,235,.35);border-radius:999px;padding:4px 10px;flex:none">Araştırma</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">AlphaFold 4, ilaç etkileşimlerini %30 daha isabetli öngörüyor</div>
+          </div>
+          <div style="background:#fff;border:1px solid rgba(37,99,235,.13);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px rgba(15,27,51,.06)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:11px;background:#E7EEFB;border:1px solid rgba(37,99,235,.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#2563EB;flex:none">HF</div>
+              <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">Hugging Face</div><div style="font-size:12px;color:rgba(15,27,51,.55)">8 saat önce · EN→TR</div></div>
+              <span style="font-size:11px;font-weight:600;color:#2563EB;border:1px solid rgba(37,99,235,.35);border-radius:999px;padding:4px 10px;flex:none">Açık Kaynak</span>
+            </div>
+            <div style="font-size:16px;font-weight:600;line-height:1.4">Mistral-Nano 12B açık ağırlıkla yayınlandı — telefonda çalışıyor</div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);border-top:1px solid rgba(37,99,235,.15);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#2563EB"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:600">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:500">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(15,27,51,.28);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="9b Detay light" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">9b</span><span style="font-size:13px;font-weight:600">Detay — light</span></div>
+      <div style="width:390px;height:844px;background:#F4F6FB;border-radius:46px;border:1px solid #D8E0F0;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden;position:relative;flex:none;color:#0F1B33">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#0F1B33"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#0F1B33"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#0F1B33"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#0F1B33" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#0F1B33"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#0F1B33" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#0F1B33"></rect></svg></div>
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:10px">
+          <div style="width:44px;height:44px;border:1px solid rgba(37,99,235,.3);border-radius:13px;display:flex;align-items:center;justify-content:center;background:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#0F1B33" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18.5L8.5 12 15 5.5"></path></svg></div>
+          <div style="flex:1;text-align:center"><div style="font-size:14px;font-weight:600">Google DeepMind</div><div style="font-size:11px;color:rgba(15,27,51,.5)">6 saat önce</div></div>
+          <div style="width:44px;height:44px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center;color:#2563EB"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg></div>
+        </div>
+        <div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-size:11px;font-weight:600;color:#2563EB;border:1px solid rgba(37,99,235,.35);border-radius:999px;padding:4px 10px">Araştırma</span><span style="background:rgba(37,99,235,.1);color:#2563EB;font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px">EN→TR</span></div>
+          <div style="font-size:21px;font-weight:800;line-height:1.3">AlphaFold 4, ilaç etkileşimlerini %30 daha isabetli öngörüyor</div>
+          <div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 10px rgba(15,27,51,.07)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg>
+              <span style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.12em;color:#2563EB">AI TR ÖZET</span>
+              <span style="background:#BAE6FD;color:#0B1220;font-size:10px;font-weight:700;border-radius:999px;padding:3px 8px;margin-left:auto">3 madde</span>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start"><div style="width:6px;height:6px;background:#2563EB;flex:none;margin-top:7px"></div><div style="font-size:14px;line-height:1.55;color:rgba(15,27,51,.9)">Protein–ilaç etkileşim tahminlerinde önceki sürüme göre %30 daha isabetli.</div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start"><div style="width:6px;height:6px;background:#2563EB;flex:none;margin-top:7px"></div><div style="font-size:14px;line-height:1.55;color:rgba(15,27,51,.9)">Klinik öncesi aday taraması haftalardan saatlere iniyor.</div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start"><div style="width:6px;height:6px;background:#2563EB;flex:none;margin-top:7px"></div><div style="font-size:14px;line-height:1.55;color:rgba(15,27,51,.9)">Ağırlıklar akademik kullanım için önümüzdeki ay açılacak.</div></div>
+            <div style="font-size:11px;color:rgba(15,27,51,.45);border-top:1px solid rgba(37,99,235,.15);padding-top:10px">Claude ile çevrildi ve özetlendi · 09:41</div>
+          </div>
+          <div style="display:flex;background:#fff;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:3px;align-self:flex-start">
+            <span style="padding:8px 18px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(15,27,51,.6)">Orijinal</span>
+            <span style="padding:8px 18px;border-radius:9px;font-size:13px;font-weight:600;background:#2563EB;color:#fff">Çeviri</span>
+          </div>
+          <div style="font-size:14px;line-height:1.65;color:rgba(15,27,51,.8)">DeepMind ekibi, AlphaFold 4'ün yalnızca protein yapısını değil, küçük molekül etkileşimlerini de tek geçişte modellediğini açıkladı…</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 34px;background:linear-gradient(180deg,rgba(244,246,251,0),rgba(244,246,251,.97) 45%);z-index:30">
+          <div style="height:50px;background:#2563EB;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;color:#fff;box-shadow:0 6px 20px rgba(37,99,235,.3)">Kaynağa git <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M19 13.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6.5A1.5 1.5 0 0 1 5 5h5.5"></path></svg></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(15,27,51,.28);z-index:35"></div>
+      </div>
+    </div>
+
+    <div data-screen-label="9c Ayarlar light" style="display:flex;flex-direction:column;gap:10px;flex:none">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 11px ui-monospace,Menlo,monospace;color:#0B1220;background:#60A5FA;padding:3px 8px;border-radius:6px">9c</span><span style="font-size:13px;font-weight:600">Ayarlar — light</span></div>
+      <div style="width:390px;height:844px;background:#F4F6FB;border-radius:46px;border:1px solid #D8E0F0;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden;position:relative;flex:none;color:#0F1B33">
+        <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:40"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#0F1B33"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#0F1B33"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#0F1B33"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#0F1B33" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#0F1B33"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#0F1B33" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#0F1B33"></rect></svg></div>
+        <div style="padding:14px 20px 0"><div style="font-size:21px;font-weight:800">Ayarlar</div></div>
+        <div style="display:flex;flex-direction:column;gap:18px;padding:16px 20px 130px">
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(15,27,51,.45);margin-bottom:8px">ÇEVİRİ</div>
+            <div style="background:#fff;border:1px solid rgba(37,99,235,.13);border-radius:16px;padding:2px 16px;box-shadow:0 2px 8px rgba(15,27,51,.05)">
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1"><div style="font-size:15px;font-weight:600">Otomatik çeviri</div><div style="font-size:12px;color:rgba(15,27,51,.55)">Yabancı içerik Türkçeye çevrilir</div></div>
+                <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.1)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Özet uzunluğu</div>
+                <span style="font-size:14px;color:rgba(15,27,51,.55)">Orta</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(15,27,51,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(15,27,51,.45);margin-bottom:8px">GÜNLÜK DIGEST</div>
+            <div style="background:#fff;border:1px solid rgba(37,99,235,.13);border-radius:16px;padding:2px 16px;box-shadow:0 2px 8px rgba(15,27,51,.05)">
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Digest saati</div>
+                <span style="background:rgba(37,99,235,.08);color:#2563EB;font:700 13px ui-monospace,Menlo,monospace;border-radius:8px;padding:5px 10px">08:00</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(15,27,51,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.1)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1"><div style="font-size:15px;font-weight:600">Digest bildirimi</div><div style="font-size:12px;color:rgba(15,27,51,.55)">Hazır olunca haber ver</div></div>
+                <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;position:relative;flex:none"><div style="position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(15,27,51,.45);margin-bottom:8px">GÖRÜNÜM</div>
+            <div style="background:#fff;border:1px solid rgba(37,99,235,.13);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(15,27,51,.05)">
+              <div style="flex:1;font-size:15px;font-weight:600">Tema</div>
+              <div style="display:flex;background:#F4F6FB;border:1px solid rgba(37,99,235,.2);border-radius:12px;padding:3px">
+                <span style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(15,27,51,.6)">Koyu</span>
+                <span style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;background:#2563EB;color:#fff;display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"></path></svg>Açık</span>
+                <span style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(15,27,51,.6)">Sistem</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);border-top:1px solid rgba(37,99,235,.15);display:flex;padding:6px 6px 24px;z-index:30">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:500">Feed</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:500">Digest</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:500">Kaydedilen</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:rgba(15,27,51,.5)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:500">Kaynaklar</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#2563EB"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:600">Ayarlar</span></div>
+        </div>
+        <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(15,27,51,.28);z-index:35"></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section style="padding:36px 60px 60px">
+  <p style="margin:0;font-size:13px;line-height:1.8;color:rgba(229,234,242,.55);max-width:760px">Sonraki adımlar: gezilebilir <b style="color:#E5EAF2">interaktif prototip</b> ayrı dosya olarak geliyor · gerçek kaynak logoları gelirse harf-tile'lar birebir değişir · istersen onboarding (kaynak seçimi) ekranı da eklerim.</p>
+</section>
+</x-dc>
+</body>
+</html>
