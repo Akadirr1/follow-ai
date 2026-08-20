@@ -13,6 +13,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Toast } from '../src/components/Toast';
+import { QueryProvider } from '../src/providers/QueryProvider';
 import { StoreProvider } from '../src/store/StoreProvider';
 import { dark } from '../src/theme/palettes';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
@@ -55,6 +56,10 @@ export default function RootLayout() {
  * Inside the provider so it can read the resolved palette. It holds the same blank
  * canvas until the stored preference has been read, so the app never paints one
  * theme and then swaps to the other in front of the user.
+ *
+ * `QueryProvider` mounts *inside* this gate (arch-001 §4 bootstrap order: theme,
+ * then cache restore, then routes) so the persisted query cache is never restored
+ * behind a screen that is about to repaint in the other theme.
  */
 function ThemedApp() {
   const { palette, scheme, isReady } = useTheme();
@@ -64,21 +69,23 @@ function ThemedApp() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: palette.appBg }}>
-      {/* Light content on a dark ground and vice versa. */}
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: palette.appBg },
-          animation: 'slide_from_right',
-        }}
-      >
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="article/[id]" />
-        <Stack.Screen name="search" options={{ animation: 'fade' }} />
-      </Stack>
-      <Toast />
-    </View>
+    <QueryProvider>
+      <View style={{ flex: 1, backgroundColor: palette.appBg }}>
+        {/* Light content on a dark ground and vice versa. */}
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: palette.appBg },
+            animation: 'slide_from_right',
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="article/[id]" />
+          <Stack.Screen name="search" options={{ animation: 'fade' }} />
+        </Stack>
+        <Toast />
+      </View>
+    </QueryProvider>
   );
 }

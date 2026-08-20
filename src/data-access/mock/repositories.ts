@@ -179,7 +179,7 @@ export function createMockEnrichmentRepository(): EnrichmentRepository {
 
       // The fixtures ship Claude's output already, so the mock is always `ready`.
       // The `queued` branch still exists on the contract because the real backend
-      // returns it whenever ANTHROPIC_API_KEY is unset (addendum §E).
+      // returns it whenever the Anthropic key is unset (addendum §E).
       if (!article.summary) {
         console.warn(`[mock] article "${trimmed}" has no fixture summary; reporting queued.`);
         return ok({ status: 'queued', reason: 'no_fixture_summary' });

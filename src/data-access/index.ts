@@ -5,7 +5,7 @@
  */
 import { env, type DataMode } from '../config/env';
 import { createMockRepositories } from './mock';
-import { createSupabaseRepositories } from './supabase/stub';
+import { createSupabaseRepositories } from './supabase';
 import type { Repositories } from './repositories';
 
 export * from './repositories';

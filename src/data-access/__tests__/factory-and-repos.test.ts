@@ -1,5 +1,5 @@
 import { env } from '../../config/env';
-import { isDataErrorException } from '../../domain/errors';
+
 import {
   getRepositories,
   REPOSITORY_CONTRACT_VERSION,
@@ -30,19 +30,15 @@ describe('repository factory', () => {
     }
   });
 
-  it('throws a typed not_implemented DataError for supabase mode', () => {
-    expect(() => getRepositories('supabase')).toThrow();
-    try {
-      getRepositories('supabase');
-      throw new Error('expected getRepositories("supabase") to throw');
-    } catch (thrown) {
-      expect(isDataErrorException(thrown)).toBe(true);
-      if (isDataErrorException(thrown)) {
-        expect(thrown.error.code).toBe('not_implemented');
-        expect(thrown.error.retryable).toBe(false);
-        expect(thrown.error.message).toContain('EXPO_PUBLIC_DATA_MODE');
-      }
-    }
+  /**
+   * P6 replaced P1's `not_implemented` stub with the real Supabase adapter, so
+   * asking for supabase mode now builds a client. In a test run (and any build
+   * with no `EXPO_PUBLIC_SUPABASE_*`) that fails loudly at construction, naming
+   * the variables — rather than handing back a set whose every call errors.
+   */
+  it('fails with a configuration error for supabase mode when the env vars are unset', () => {
+    expect(env.supabaseUrl).toBeNull();
+    expect(() => getRepositories('supabase')).toThrow(/EXPO_PUBLIC_SUPABASE_URL/);
   });
 });
 

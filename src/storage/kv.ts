@@ -122,7 +122,27 @@ function createNativeStore(): KvStore {
 
 export const kv: KvStore = Platform.OS === 'web' ? createWebStore() : createNativeStore();
 
-/** Storage keys owned by the app. Adding one here keeps them greppable in one place. */
+/**
+ * Storage keys owned by the app. Adding one here keeps them greppable in one place.
+ *
+ * Everything P6 added carries a `v1:` prefix: the values are JSON whose shape is
+ * tied to the repository contract version, so a future shape change writes under
+ * `v2:` and leaves the old blob to be ignored rather than mis-parsed.
+ */
 export const KV_KEYS = {
   themePreference: 'aigundem.theme-preference',
+
+  /** uuid v4, generated once per install (addendum §A: identity is device-local). */
+  deviceId: 'v1:aigundem.device_id',
+
+  /** Device-local user state — none of this is ever sent to Supabase. */
+  enabledSourceIds: 'v1:aigundem.user.enabled_sources',
+  savedArticles: 'v1:aigundem.user.saved',
+  readArticles: 'v1:aigundem.user.read',
+  settings: 'v1:aigundem.user.settings',
+  recentSearches: 'v1:aigundem.user.recent_searches',
+  onboardingDone: 'v1:aigundem.user.onboarding_done',
+
+  /** TanStack Query's persisted cache blob. */
+  queryCache: 'v1:aigundem.query-cache',
 } as const;
