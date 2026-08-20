@@ -51,6 +51,25 @@ with `execute_sql` using `set local role anon;` probes — not pgTAP/Docker.
 Cron jobs are created by migration 007 but **left unscheduled/disabled** until the
 coordinator's remote smoke of `sync-feeds` passes; enabling is a coordinator step.
 
+### C.1 Database access from Edge Functions (decided 2026-08-21 ~04:15, supersedes interim notes)
+**Measured:** `ALTER ROLE authenticator` is superuser-only on hosted Supabase
+(42501), so schema `aigundem` is **not** exposed to PostgREST until the human sets
+it in the Dashboard. PostgREST exposure is server config; `service_role` does not
+bypass it.
+**Decision:** Edge Functions keep using `supabase-js` with the service-role key,
+but every DB access goes through namespaced objects in `public`:
+- reads: the `public.aigundem_*_v1` security-invoker shims (0006, 0007);
+- writes/leases/rate-limits: `public.aigundem_internal_*` SECURITY DEFINER
+  wrappers (`set search_path = ''`, schema-qualified, argument-validated,
+  EXECUTE to `service_role` only, revoked from public/anon/authenticated) —
+  P3 owns `202608210006_internal_wrappers.sql`; P4/P5 add the wrappers they
+  need in their own migrations following the same rules.
+Routing is env-configurable (`AIGUNDEM_RPC_SCHEMA`/`AIGUNDEM_RPC_PREFIX`, default
+`public` + `aigundem_`) so that, once the human exposes `aigundem`, the switch
+is configuration, not code. Migration numbering: three files share prefix
+`202608210006` (shims, internal wrappers, seed) and `0007` is the catalog shims;
+**P5 cron is `202608210008`**. Migrations are applied by the coordinator by name.
+
 ## D. Anthropic has no first-party feed → 6 default sources in v1
 **Measured:** all Anthropic feed candidates 404/403; `/news` advertises no feed.
 **Change (arch-001 §3 rule applied):** no scraping, no mirror. Seed migration 006
