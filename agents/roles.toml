@@ -1,0 +1,131 @@
+# Role registry — the single source of truth for how each agent is launched.
+#
+# Profiles live in agents/ as <role>.md and carry doctrine only.
+# Launch configuration lives here and nowhere else: never in a CLI's global
+# config, never duplicated into a profile's frontmatter.
+#
+# How these fields become flags:
+#   claude  --model <model>                  # CLAUDE_EFFORT carries effort
+#   codex   -c model="<model>" -c model_reasoning_effort="<effort>"
+#   agy     --model <model>                  # gemini-* ids already encode level
+#
+# layer:
+#   1   the coordinator itself
+#   2a  one-shot call, no supervised worker, no lifecycle
+#   2b  supervised Orca orchestration worker, --worktree current
+#   3   council, human-triggered only
+#
+# Any role may declare a [roles.<name>.fallback] block. When the matching
+# availability toggle below is false, that block is used instead. This is how a
+# vendor outage or an exhausted quota is survived without losing the real intent.
+
+[settings]
+codex_available = true
+
+
+[roles.orchestrator]
+cli     = "claude"
+model   = "fable"
+effort  = "high"
+layer   = "1"
+profile = "orchestrator.md"
+
+[roles.analyst]
+cli     = "codex"
+model   = "gpt-5.6-sol"
+effort  = "xhigh"
+layer   = "2b"
+profile = "analyst.md"
+[roles.analyst.fallback]
+cli     = "claude"
+model   = "opus"
+effort  = "high"
+
+[roles.architect]
+cli     = "codex"
+model   = "gpt-5.6-sol"
+effort  = "xhigh"
+layer   = "2b"
+profile = "architect.md"
+[roles.architect.fallback]
+cli     = "claude"
+model   = "opus"
+effort  = "high"
+
+[roles.reviewer]
+cli     = "codex"
+model   = "gpt-5.6-sol"
+effort  = "high"
+layer   = "2b"
+profile = "reviewer.md"
+[roles.reviewer.fallback]
+cli     = "claude"
+model   = "opus"
+effort  = "high"
+
+[roles.safety]
+cli     = "codex"
+model   = "gpt-5.6-sol"
+effort  = "xhigh"
+layer   = "2b"
+profile = "safety.md"
+[roles.safety.fallback]
+cli     = "claude"
+model   = "opus"
+effort  = "high"
+
+[roles.test-verifier]
+cli     = "codex"
+model   = "gpt-5.6-sol"
+effort  = "high"
+layer   = "2b"
+profile = "test-verifier.md"
+[roles.test-verifier.fallback]
+cli     = "claude"
+model   = "opus"
+effort  = "high"
+
+[roles.implementer]
+cli     = "claude"
+model   = "opus"
+effort  = "high"
+layer   = "2b"
+profile = "implementer.md"
+
+[roles.scribe]
+cli     = "agy"
+model   = "gemini-3.1-pro-high"
+effort  = ""
+layer   = "2a"
+profile = "scribe.md"
+
+# Cheap tier: summarising, classifying, drafting. No profile — the dispatch spec
+# is the whole brief.
+[roles.helper]
+cli     = "agy"
+model   = "gemini-3.7-flash-high"
+effort  = ""
+layer   = "2a"
+profile = ""
+
+# Council: two different vendors on purpose, different blind spots.
+# Human-triggered only.
+[roles.council-a]
+cli     = "claude"
+model   = "opus"
+effort  = "high"
+layer   = "3"
+profile = ""
+
+[roles.council-b]
+cli     = "codex"
+model   = "gpt-5.6-sol"
+effort  = "xhigh"
+layer   = "3"
+profile = ""
+# Falls back to a third vendor, NOT claude: a claude-versus-claude council
+# defeats its own purpose.
+[roles.council-b.fallback]
+cli     = "agy"
+model   = "gemini-3.1-pro-high"
+effort  = ""

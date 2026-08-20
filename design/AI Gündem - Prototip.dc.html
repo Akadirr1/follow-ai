@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#070C16;color:#E5EAF2;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#60A5FA;text-decoration:none}a:hover{color:#93C5FD}
+@keyframes spin{to{transform:rotate(360deg)}}
+input{font-family:'Inter',system-ui,sans-serif}
+input:focus{outline:none}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;padding:34px 20px 60px">
+  <div style="display:flex;align-items:center;gap:10px">
+    <img src="uploads/ikon3.png" width="26" height="26" style="border-radius:7px;border:1px solid rgba(96,165,250,.3)" alt="">
+    <span style="font-size:14px;font-weight:700">AI Gündem — İnteraktif Prototip</span>
+    <span style="font-size:12px;color:rgba(229,234,242,.5)">tıklayarak gez · <a href="AI Gündem — Tasarım Panosu.dc.html">tasarım panosu →</a></span>
+  </div>
+  <div style="width:390px;height:844px;background:#0B1220;border-radius:46px;border:1px solid #263450;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;position:relative;flex:none">
+    <div style="position:absolute;top:12px;left:136px;width:118px;height:34px;background:#000;border-radius:18px;z-index:60"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;position:relative;z-index:20"><span style="font-size:15px;font-weight:600">9:41</span><svg width="58" height="12" viewBox="0 0 58 12" fill="none"><rect y="6.5" width="3" height="5" rx="1" fill="#E5EAF2"></rect><rect x="4.5" y="4.5" width="3" height="7" rx="1" fill="#E5EAF2"></rect><rect x="9" y="2.5" width="3" height="9" rx="1" fill="#E5EAF2"></rect><path d="M20 5.5a7.5 7.5 0 0 1 9.6 0M22.2 8a4.2 4.2 0 0 1 5.2 0" stroke="#E5EAF2" stroke-width="1.5" stroke-linecap="round"></path><circle cx="24.8" cy="10.4" r="1.1" fill="#E5EAF2"></circle><rect x="36.5" y="1" width="20" height="10" rx="3" stroke="#E5EAF2" stroke-opacity=".45"></rect><rect x="38.5" y="3" width="12" height="6" rx="1.5" fill="#E5EAF2"></rect></svg></div>
+    <sc-if value="{{ showFeed }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:54px 0 0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:14px 20px 0;display:flex;align-items:center;gap:10px;flex:none">
+          <img src="uploads/ikon3.png" width="34" height="34" style="border-radius:9px;border:1px solid rgba(96,165,250,.3)" alt="">
+          <div style="flex:1"><div style="font-size:20px;font-weight:800">AI Gündem</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Perşembe, 20 Ağustos · <span style="color:#60A5FA;font-weight:600">12 yeni</span></div></div>
+          <div onClick="{{ openSearch }}" style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(37,99,235,.15)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg></div>
+        </div>
+        <div style="display:flex;gap:8px;padding:14px 0 12px 20px;overflow-x:auto;scrollbar-width:none;flex:none">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+            <span onClick="{{ c.pick }}" style="height:34px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;flex:none;cursor:pointer;background:{{ c.bg }};color:{{ c.col }};border:{{ c.bd }}">{{ c.label }}</span>
+          </sc-for>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:2px 16px 110px;display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ feedItems }}" as="a" hint-placeholder-count="4">
+            <div onClick="{{ a.open }}" style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,.22);cursor:pointer;flex:none" style-hover="border-color:rgba(96,165,250,.55)">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">{{ a.tile }}</div>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ a.src }}</div><div style="font-size:12px;color:rgba(229,234,242,.55)">{{ a.time }} · EN→TR</div></div>
+                <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">{{ a.cat }}</span>
+              </div>
+              <div style="font-size:16px;font-weight:600;line-height:1.4">{{ a.title }}</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ feedEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:60px 30px;text-align:center">
+              <img src="uploads/ikon1.png" width="90" height="90" style="border-radius:21px;opacity:.9" alt="">
+              <div style="font-size:16px;font-weight:700">Bu filtrede haber yok</div>
+              <div style="font-size:13px;color:rgba(229,234,242,.6)">Kategoriyi değiştir veya kaynaklarını kontrol et.</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showDigest }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:54px 0 0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:16px 20px 0;display:flex;align-items:flex-start;gap:12px;flex:none">
+          <div style="flex:1">
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#60A5FA">20 AĞUSTOS 2026 · PERŞEMBE</div>
+            <div style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin-top:6px">Bugünün AI Gündemi</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><span style="background:#BAE6FD;color:#0B1220;font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px">Hazır · {{ digestTime }}</span><span style="font-size:12px;color:rgba(229,234,242,.55)">5 haber · ~3 dk</span></div>
+          </div>
+          <img src="uploads/ikon1.png" width="56" height="56" style="border-radius:14px;box-shadow:0 4px 18px rgba(37,99,235,.35)" alt="">
+        </div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:18px 16px 110px">
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px;flex:none">
+            <div style="width:34px;height:34px;border-radius:10px;background:#BAE6FD;color:#0B1220;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">01</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">GPT-5.2 tanıtıldı: iki kat bağlam, yarı fiyat</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">API fiyatı token başına %50 düştü; 2M bağlam penceresi standart oldu.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">OpenAI Blog · Modeller</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px;flex:none">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">02</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">AlphaFold 4 ilaç keşfini hızlandırıyor</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">Etkileşim tahminlerinde %30 isabet artışı; ağırlıklar akademiye açılıyor.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">Google DeepMind · Araştırma</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px;flex:none">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">03</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">Mistral-Nano 12B telefonda çalışıyor</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">Açık ağırlıklı model, orta segment cihazlarda 30 token/sn üretiyor.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">Hugging Face · Açık Kaynak</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px;flex:none">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">04</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">AB Yapay Zekâ Yasası'nda ikinci faz</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">Genel amaçlı modeller için şeffaflık yükümlülükleri yürürlükte.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">TechCrunch AI · Ürün</div></div>
+          </div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;gap:12px;flex:none">
+            <div style="width:34px;height:34px;border-radius:10px;background:rgba(96,165,250,.14);color:#60A5FA;font:800 13px ui-monospace,Menlo,monospace;display:flex;align-items:center;justify-content:center;flex:none">05</div>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;line-height:1.4">Türkçe LLM konsorsiyumundan ilk model</div><div style="font-size:13px;line-height:1.5;color:rgba(229,234,242,.6);margin-top:4px">TÜBİTAK destekli 7B model, Türkçe kıyaslamalarda açık ara önde.</div><div style="font-size:11px;color:rgba(229,234,242,.45);margin-top:6px">Webrazzi · Türkiye</div></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showSaved }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:54px 0 0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:14px 20px 0;flex:none">
+          <div style="font-size:21px;font-weight:800">Kaydedilenler</div>
+          <div style="font-size:12px;color:rgba(229,234,242,.55);margin-top:2px">{{ savedCount }} kayıt · <span style="color:#60A5FA;font-weight:600">{{ unreadCount }} okunmadı</span></div>
+        </div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:16px 16px 110px">
+          <sc-for list="{{ savedItems }}" as="a" hint-placeholder-count="2">
+            <div onClick="{{ a.open }}" style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;cursor:pointer;flex:none;opacity:{{ a.isReadOp }}" style-hover="border-color:rgba(96,165,250,.55)">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:8px;height:8px;border-radius:50%;flex:none;background:{{ a.dotBg }}"></div>
+                <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ a.src }}</div><div style="font-size:12px;color:rgba(229,234,242,.55)">{{ a.time }} · {{ a.cat }}</div></div>
+                <div onClick="{{ a.del }}" style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:rgba(229,234,242,.45);cursor:pointer;flex:none" style-hover="background:rgba(229,72,77,.15);color:#E5484D"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l.8 13h9.4l.8-13"></path></svg></div>
+              </div>
+              <div style="font-size:16px;font-weight:600;line-height:1.4">{{ a.title }}</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ savedEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:80px 30px;text-align:center">
+              <img src="uploads/ikon1.png" width="96" height="96" style="border-radius:22px;opacity:.9" alt="">
+              <div style="font-size:16px;font-weight:700">Kaydedilen haber yok</div>
+              <div style="font-size:13px;line-height:1.6;color:rgba(229,234,242,.6)">Detaydaki bookmark simgesine dokunarak kaydet.</div>
+              <div onClick="{{ goFeed }}" style="height:46px;padding:0 20px;border:1px solid rgba(37,99,235,.5);border-radius:12px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#60A5FA;margin-top:10px;cursor:pointer" style-hover="background:rgba(37,99,235,.15)">Feed'e dön</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showSources }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:54px 0 0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:14px 20px 0;flex:none">
+          <div style="font-size:21px;font-weight:800">Kaynaklar</div>
+          <div style="font-size:12px;color:rgba(229,234,242,.55);margin-top:2px">7 kaynak · <span style="color:#60A5FA;font-weight:600">{{ activeSrc }} aktif</span></div>
+        </div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding:10px 20px 110px">
+          <sc-for list="{{ sources }}" as="s" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid rgba(37,99,235,.14);flex:none;opacity:{{ s.op }}">
+              <div style="width:40px;height:40px;border-radius:12px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#93C5FD;flex:none">{{ s.tile }}</div>
+              <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">{{ s.name }}</div><div style="font-size:12px;color:rgba(229,234,242,.55)">{{ s.meta }}</div></div>
+              <div onClick="{{ s.toggle }}" style="width:46px;height:28px;border-radius:999px;display:flex;align-items:center;padding:3px;cursor:pointer;flex:none;background:{{ s.swBg }};justify-content:{{ s.j }}"><div style="width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div></div>
+            </div>
+          </sc-for>
+          <div style="height:50px;border:1.5px dashed rgba(37,99,235,.5);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;color:#60A5FA;margin-top:16px;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Yeni kaynak ekle (RSS / URL)</div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showSettings }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:54px 0 0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:14px 20px 0;flex:none"><div style="font-size:21px;font-weight:800">Ayarlar</div></div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:18px;padding:16px 20px 110px">
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">ÇEVİRİ</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:2px 16px">
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1"><div style="font-size:15px;font-weight:600">Otomatik çeviri</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Yabancı içerik Türkçeye çevrilir</div></div>
+                <div onClick="{{ toggleTr }}" style="width:46px;height:28px;border-radius:999px;display:flex;align-items:center;padding:3px;cursor:pointer;flex:none;background:{{ trBg }};justify-content:{{ trJ }}"><div style="width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div></div>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.14)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Özet uzunluğu</div>
+                <span style="font-size:14px;color:rgba(229,234,242,.55)">Orta</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">GÜNLÜK DIGEST</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:2px 16px">
+              <div onClick="{{ openSheet }}" style="display:flex;align-items:center;gap:12px;min-height:56px;cursor:pointer">
+                <div style="flex:1;font-size:15px;font-weight:600">Digest saati</div>
+                <span style="background:rgba(96,165,250,.14);color:#60A5FA;font:700 13px ui-monospace,Menlo,monospace;border-radius:8px;padding:5px 10px">{{ digestTime }}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.14)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1"><div style="font-size:15px;font-weight:600">Digest bildirimi</div><div style="font-size:12px;color:rgba(229,234,242,.55)">Hazır olunca haber ver</div></div>
+                <div style="width:46px;height:28px;background:#2563EB;border-radius:999px;display:flex;align-items:center;justify-content:flex-end;padding:3px;flex:none"><div style="width:22px;height:22px;background:#fff;border-radius:50%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">GÖRÜNÜM</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+              <div style="flex:1;font-size:15px;font-weight:600">Tema</div>
+              <div style="display:flex;background:#0E1930;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:3px">
+                <span style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;background:#2563EB;color:#fff">Koyu</span>
+                <span onClick="{{ themeTap }}" style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6);cursor:pointer">Açık</span>
+                <span onClick="{{ themeTap }}" style="padding:7px 13px;border-radius:9px;font-size:13px;font-weight:600;color:rgba(229,234,242,.6);cursor:pointer">Sistem</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:8px">HAKKINDA</div>
+            <div style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:2px 16px">
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Hakkında</div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"></path></svg>
+              </div>
+              <div style="height:1px;background:rgba(37,99,235,.14)"></div>
+              <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+                <div style="flex:1;font-size:15px;font-weight:600">Sürüm</div>
+                <span style="font:12px ui-monospace,Menlo,monospace;color:rgba(229,234,242,.5)">1.0.0 · Expo SDK 54</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:54px 0 0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:10px;flex:none">
+          <div onClick="{{ back }}" style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none" style-hover="background:rgba(37,99,235,.15)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18.5L8.5 12 15 5.5"></path></svg></div>
+          <div style="flex:1;text-align:center;min-width:0"><div style="font-size:14px;font-weight:600">{{ art.src }}</div><div style="font-size:11px;color:rgba(229,234,242,.5)">{{ art.time }}</div></div>
+          <div onClick="{{ toggleSave }}" style="width:44px;height:44px;border:1px solid rgba(37,99,235,.45);border-radius:13px;display:flex;align-items:center;justify-content:center;color:#60A5FA;cursor:pointer;flex:none;background:{{ bmBg }}" style-hover="background:rgba(96,165,250,.2)"><svg width="19" height="19" viewBox="0 0 24 24" fill="{{ bmFill }}" stroke="#60A5FA" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg></div>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:16px 20px 90px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:8px;align-items:center;flex:none"><span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px">{{ art.cat }}</span><span style="background:rgba(96,165,250,.14);color:#60A5FA;font-size:11px;font-weight:700;border-radius:999px;padding:5px 10px">EN→TR</span></div>
+          <div style="font-size:20px;font-weight:800;line-height:1.32;letter-spacing:-.01em;flex:none">{{ art.title }}</div>
+          <div style="background:#15233B;border:1px solid rgba(37,99,235,.35);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:11px;box-shadow:0 2px 12px rgba(0,0,0,.25);flex:none">
+            <div style="display:flex;align-items:center;gap:8px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg>
+              <span style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.12em;color:#60A5FA">AI TR ÖZET</span>
+              <span style="background:#BAE6FD;color:#0B1220;font-size:10px;font-weight:700;border-radius:999px;padding:3px 8px;margin-left:auto">3 madde</span>
+            </div>
+            <sc-for list="{{ art.sum }}" as="b" hint-placeholder-count="3">
+              <div style="display:flex;gap:10px;align-items:flex-start"><div style="width:6px;height:6px;background:#60A5FA;flex:none;margin-top:7px"></div><div style="font-size:14px;line-height:1.55;color:rgba(229,234,242,.92)">{{ b }}</div></div>
+            </sc-for>
+            <div style="font-size:11px;color:rgba(229,234,242,.45);border-top:1px solid rgba(37,99,235,.2);padding-top:10px">Claude ile çevrildi ve özetlendi · 09:41</div>
+          </div>
+          <div style="display:flex;background:#0E1930;border:1px solid rgba(37,99,235,.25);border-radius:12px;padding:3px;align-self:flex-start;flex:none">
+            <span onClick="{{ setEn }}" style="padding:8px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;background:{{ segEnBg }};color:{{ segEnC }}">Orijinal</span>
+            <span onClick="{{ setTr }}" style="padding:8px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;background:{{ segTrBg }};color:{{ segTrC }}">Çeviri</span>
+          </div>
+          <div style="font-size:11px;font-weight:600;color:rgba(229,234,242,.45);flex:none">{{ bodyLabel }}</div>
+          <div style="font-size:14px;line-height:1.65;color:rgba(229,234,242,.8)">{{ bodyText }}</div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 34px;background:linear-gradient(180deg,rgba(11,18,32,0),rgba(11,18,32,.96) 45%);z-index:30">
+          <div onClick="{{ goSource }}" style="height:50px;background:#2563EB;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;color:#fff;box-shadow:0 6px 20px rgba(37,99,235,.35);cursor:pointer" style-hover="background:#1D4FD8">Kaynağa git <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"></path><path d="M20 4l-9 9"></path><path d="M19 13.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V6.5A1.5 1.5 0 0 1 5 5h5.5"></path></svg></div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showSearch }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:54px 0 0;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:10px 16px 0;display:flex;align-items:center;gap:10px;flex:none">
+          <div onClick="{{ back }}" style="width:44px;height:44px;border:1px solid rgba(37,99,235,.35);border-radius:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none" style-hover="background:rgba(37,99,235,.15)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18.5L8.5 12 15 5.5"></path></svg></div>
+          <div style="flex:1;height:44px;background:#0E1930;border:1px solid #2563EB;border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 14px">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="1.8" stroke-linecap="round" style="flex:none"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg>
+            <input value="{{ q }}" onChange="{{ onQ }}" placeholder="AI gündeminde ara…" style="flex:1;background:transparent;border:none;color:#E5EAF2;font-size:14px;min-width:0">
+            <sc-if value="{{ hasQ }}" hint-placeholder-val="{{ false }}">
+              <svg onClick="{{ clearQ }}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.5)" stroke-width="2" stroke-linecap="round" style="flex:none;cursor:pointer"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </sc-if>
+          </div>
+        </div>
+        <sc-if value="{{ hasQ }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:16px 16px 40px">
+            <sc-for list="{{ results }}" as="a" hint-placeholder-count="2">
+              <div onClick="{{ a.open }}" style="background:#15233B;border:1px solid rgba(37,99,235,.18);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;cursor:pointer;flex:none" style-hover="border-color:rgba(96,165,250,.55)">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:36px;height:36px;border-radius:11px;background:#1E3358;border:1px solid rgba(96,165,250,.28);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#93C5FD;flex:none">{{ a.tile }}</div>
+                  <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">{{ a.src }}</div><div style="font-size:12px;color:rgba(229,234,242,.55)">{{ a.time }}</div></div>
+                  <span style="font-size:11px;font-weight:600;color:#60A5FA;border:1px solid rgba(37,99,235,.4);border-radius:999px;padding:4px 10px;flex:none">{{ a.cat }}</span>
+                </div>
+                <div style="font-size:16px;font-weight:600;line-height:1.4">{{ a.title }}</div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:60px 30px;text-align:center">
+                <img src="uploads/ikon1.png" width="84" height="84" style="border-radius:19px;opacity:.85" alt="">
+                <div style="font-size:15px;font-weight:700">Sonuç bulunamadı</div>
+                <div style="font-size:13px;color:rgba(229,234,242,.6)">Farklı bir anahtar kelime dene.</div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showRecent }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;display:flex;flex-direction:column;padding:24px 20px 0">
+            <div style="font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.14em;color:rgba(229,234,242,.45);margin-bottom:6px">SON ARAMALAR</div>
+            <div onClick="{{ q1 }}" style="display:flex;align-items:center;gap:12px;height:48px;border-bottom:1px solid rgba(37,99,235,.14);cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.45)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span style="flex:1;font-size:14px">gpt-5.2</span></div>
+            <div onClick="{{ q2 }}" style="display:flex;align-items:center;gap:12px;height:48px;border-bottom:1px solid rgba(37,99,235,.14);cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.45)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span style="flex:1;font-size:14px">türkçe llm</span></div>
+            <div onClick="{{ q3 }}" style="display:flex;align-items:center;gap:12px;height:48px;border-bottom:1px solid rgba(37,99,235,.14);cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(229,234,242,.45)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span style="flex:1;font-size:14px">alphafold</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:80px;text-align:center">
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="rgba(96,165,250,.5)" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.4-4.4"></path></svg>
+              <div style="font-size:14px;color:rgba(229,234,242,.55)">Aramak için yaz — başlık, kaynak veya kategori.</div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+    <sc-if value="{{ inTabs }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(11,18,32,.94);border-top:1px solid rgba(37,99,235,.28);display:flex;padding:6px 6px 24px;z-index:30">
+        <div onClick="{{ goFeed }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;color:{{ feedC }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h9"></path></svg><span style="font-size:10.5px;font-weight:600">Feed</span></div>
+        <div onClick="{{ goDigest }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;color:{{ digestC }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 4l1.8 5.2 5.2 1.8-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg><span style="font-size:10.5px;font-weight:600">Digest</span></div>
+        <div onClick="{{ goSaved }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;color:{{ savedC }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10v16l-5-3.5L7 20z"></path></svg><span style="font-size:10.5px;font-weight:600">Kaydedilen</span></div>
+        <div onClick="{{ goSources }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;color:{{ sourcesC }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 11.5a7.5 7.5 0 0 1 7.5 7.5M5 5.5A13.5 13.5 0 0 1 18.5 19"></path><circle cx="5.8" cy="18.2" r="1.5" fill="currentColor" stroke="none"></circle></svg><span style="font-size:10.5px;font-weight:600">Kaynaklar</span></div>
+        <div onClick="{{ goSettings }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;color:{{ settingsC }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.6M12 18.4V21M3 12h2.6M18.4 12H21M5.6 5.6l1.9 1.9M16.5 16.5l1.9 1.9M18.4 5.6l-1.9 1.9M7.5 16.5l-1.9 1.9"></path></svg><span style="font-size:10.5px;font-weight:600">Ayarlar</span></div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(4,8,16,.62);z-index:45"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#15233B;border-radius:24px 24px 0 0;border-top:1px solid rgba(96,165,250,.25);padding:10px 20px 40px;z-index:50">
+        <div style="width:40px;height:4px;background:rgba(229,234,242,.25);border-radius:2px;margin:0 auto 14px"></div>
+        <div style="font-size:17px;font-weight:700;margin-bottom:4px">Digest saati</div>
+        <div style="font-size:13px;color:rgba(229,234,242,.55);margin-bottom:12px">Günlük özet her gün bu saatte hazırlanır.</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <sc-for list="{{ times }}" as="t" hint-placeholder-count="5">
+            <div onClick="{{ t.pick }}" style="height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:ui-monospace,Menlo,monospace;background:{{ t.bg }};color:{{ t.col }};font-size:{{ t.fs }};font-weight:{{ t.fw }}">{{ t.t }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <div onClick="{{ closeSheet }}" style="flex:1;height:50px;border:1px solid rgba(37,99,235,.4);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:rgba(229,234,242,.75);cursor:pointer" style-hover="background:rgba(37,99,235,.12)">Vazgeç</div>
+          <div onClick="{{ saveTime }}" style="flex:1;height:50px;background:#2563EB;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;cursor:pointer" style-hover="background:#1D4FD8">Kaydet</div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:110px;background:#1E3358;border:1px solid rgba(96,165,250,.4);border-radius:999px;padding:9px 18px;font-size:13px;font-weight:600;color:#E5EAF2;white-space:nowrap;z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.4)">{{ toast }}</div>
+    </sc-if>
+    <div style="position:absolute;bottom:8px;left:128px;width:134px;height:5px;border-radius:3px;background:rgba(229,234,242,.32);z-index:65"></div>
+  </div>
+  <div style="font-size:12px;color:rgba(229,234,242,.45);max-width:390px;text-align:center;line-height:1.6">Kart → detay · bookmark kaydeder · chip'ler filtreler · arama büyüteçten · Kaydedilenler'de çöp ikonu siler · Ayarlar'da digest saati seçilir. Prototip koyu tema sabittir; light tema panoda.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 520, &quot;height&quot;: 980}, &quot;baslangicSekmesi&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;feed&quot;, &quot;options&quot;: [&quot;feed&quot;, &quot;digest&quot;, &quot;saved&quot;, &quot;sources&quot;, &quot;settings&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Prototip&quot;}, &quot;ceviriVarsayilan&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Prototip&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: this.props.baslangicSekmesi ?? 'feed', view: 'tabs', artId: 'gd', filter: 'Tümü',
+    saved: {gd:true, hf:true}, read: {oa:true}, seg: 'tr', sheet: false,
+    digestTime: '08:00', tmpTime: '08:00', q: '',
+    translate: this.props.ceviriVarsayilan ?? true,
+    srcOn: {oa:true, an:true, gd:true, hf:true, ax:true, tc:false, wz:true}, toast: ''
+  };
+  arts() {
+    return [
+      {id:'oa', tile:'OA', src:'OpenAI Blog', time:'2 saat önce', cat:'Modeller', title:'GPT-5.2 tanıtıldı: iki kat bağlam penceresi, yarı fiyat', sum:['API fiyatı token başına %50 düştü; 2M bağlam standart oldu.','Gerçek zamanlı ses modu tüm planlara açıldı.','Kod ajanları için yeni araç çağırma protokolü geldi.'], body:'OpenAI, GPT-5.2 ile bağlam penceresini 2 milyon tokena çıkarırken API fiyatını yarıya indirdiğini duyurdu. Şirket, yeni sürümün özellikle uzun doküman analizi ve çok adımlı ajan görevlerinde belirgin fark yarattığını söylüyor…', en:'OpenAI announced GPT-5.2, doubling the context window to 2M tokens while cutting API prices in half. The company says the new release makes a visible difference on long-document analysis and multi-step agent tasks…'},
+      {id:'an', tile:'AN', src:'Anthropic', time:'4 saat önce', cat:'Ürün', title:'Claude\'a takım hafızası geldi: projeler arası kalıcı bağlam', sum:['Hafıza, proje bazında açılıp kapatılabiliyor.','Ekip üyeleri arasında paylaşımlı bilgi tabanı.','Kurumsal planlarda bugün itibarıyla aktif.'], body:'Anthropic, Claude için projeler arası kalıcı hafızayı duyurdu. Özellik, ekiplerin tekrar eden bağlam aktarımını ortadan kaldırıyor; hafıza istenirse proje bazında kapatılabiliyor…', en:'Anthropic announced persistent cross-project memory for Claude. The feature removes repeated context handoffs for teams; memory can be disabled per project…'},
+      {id:'gd', tile:'GD', src:'Google DeepMind', time:'6 saat önce', cat:'Araştırma', title:'AlphaFold 4, ilaç etkileşimlerini %30 daha isabetli öngörüyor', sum:['Protein–ilaç etkileşim tahminlerinde %30 isabet artışı.','Klinik öncesi aday taraması haftalardan saatlere iniyor.','Ağırlıklar akademik kullanım için önümüzdeki ay açılacak.'], body:'DeepMind ekibi, AlphaFold 4\'ün yalnızca protein yapısını değil, küçük molekül etkileşimlerini de tek geçişte modellediğini açıkladı. Yeni mimari, bağlanma afinitesi tahminlerinde bağımsız kıyaslamalarda öne çıktı…', en:'The DeepMind team revealed that AlphaFold 4 models not only protein structure but small-molecule interactions in a single pass. The new architecture leads independent benchmarks on binding-affinity prediction…'},
+      {id:'hf', tile:'HF', src:'Hugging Face', time:'8 saat önce', cat:'Açık Kaynak', title:'Mistral-Nano 12B açık ağırlıkla yayınlandı — telefonda çalışıyor', sum:['Orta segment telefonlarda 30 token/sn üretim.','Apache 2.0 lisansı ile tam açık ağırlık.','4-bit kuantize sürüm 6 GB RAM ile yetiniyor.'], body:'Mistral\'in 12 milyar parametrelik yeni modeli açık ağırlıkla yayınlandı. Topluluk testlerinde model, orta segment telefonlarda saniyede ~30 token üretebiliyor…', en:'Mistral\'s new 12B model shipped with open weights. In community tests the model generates ~30 tokens/s on mid-range phones…'},
+      {id:'wz', tile:'WZ', src:'Webrazzi', time:'dün', cat:'Türkiye', title:'TÜBİTAK destekli Türkçe LLM konsorsiyumu ilk modelini duyurdu', sum:['7B model Türkçe kıyaslamalarda açık ara önde.','Üniversite-sanayi ortaklığıyla eğitildi.','Ağırlıklar araştırmacılara açılacak.'], body:'TÜBİTAK destekli konsorsiyum, ilk Türkçe odaklı büyük dil modelini duyurdu. 7 milyar parametrelik model, Türkçe anlama kıyaslamalarında mevcut açık modellerin önüne geçti…', en:'The TÜBİTAK-backed consortium announced its first Turkish-focused LLM. The 7B model surpasses existing open models on Turkish understanding benchmarks…'}
+    ];
+  }
+  toastMsg(t) {
+    this.setState({toast: t});
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => this.setState({toast: ''}), 2200);
+  }
+  renderVals() {
+    const s = this.state, arts = this.arts();
+    const cats = ['Tümü','Modeller','Araştırma','Ürün','Açık Kaynak','Türkiye'];
+    const A = '#60A5FA', IN = 'rgba(229,234,242,.5)';
+    const art = arts.find(a => a.id === s.artId) || arts[2];
+    const feedItems = arts.filter(a => s.srcOn[a.id] && (s.filter === 'Tümü' || a.cat === s.filter)).map(a => Object.assign({}, a, {
+      open: () => this.setState({view:'detail', artId:a.id, seg:'tr', read: Object.assign({}, s.read, {[a.id]: true})})
+    }));
+    const savedItems = arts.filter(a => s.saved[a.id]).map(a => Object.assign({}, a, {
+      isReadOp: s.read[a.id] ? '.62' : '1', dotBg: s.read[a.id] ? 'transparent' : A,
+      open: () => { if (this._suppressOpen) return; this.setState({view:'detail', artId:a.id, seg:'tr', read: Object.assign({}, s.read, {[a.id]: true})}); },
+      del: (e) => { if (e) { e.stopPropagation(); e.preventDefault(); } this._suppressOpen = true; setTimeout(() => { this._suppressOpen = false; }, 50); const sv = Object.assign({}, this.state.saved); delete sv[a.id]; this.setState({saved: sv}); this.toastMsg('Kayıt silindi'); }
+    }));
+    const chips = cats.map(c => ({label:c, pick: () => this.setState({filter:c}),
+      bg: s.filter === c ? '#2563EB' : 'transparent', col: s.filter === c ? '#fff' : 'rgba(229,234,242,.75)',
+      bd: s.filter === c ? '1px solid #2563EB' : '1px solid rgba(37,99,235,.4)'}));
+    const srcMeta = [['oa','OA','OpenAI Blog','Modeller · EN'],['an','AN','Anthropic','Ürün · EN'],['gd','GD','Google DeepMind','Araştırma · EN'],['hf','HF','Hugging Face','Açık Kaynak · EN'],['ax','AX','arXiv cs.AI','Araştırma · EN'],['tc','TC','TechCrunch AI','Ürün · EN'],['wz','WZ','Webrazzi AI','Türkiye · TR']];
+    const sources = srcMeta.map(m => ({k:m[0], tile:m[1], name:m[2], meta:m[3],
+      on: s.srcOn[m[0]], swBg: s.srcOn[m[0]] ? '#2563EB' : '#1B2B47', j: s.srcOn[m[0]] ? 'flex-end' : 'flex-start', op: s.srcOn[m[0]] ? '1' : '.55',
+      toggle: () => this.setState({srcOn: Object.assign({}, this.state.srcOn, {[m[0]]: !this.state.srcOn[m[0]]})})}));
+    const ql = s.q.trim().toLowerCase();
+    const results = ql ? arts.filter(a => (a.title + ' ' + a.src + ' ' + a.cat).toLowerCase().includes(ql)).map(a => Object.assign({}, a, {
+      open: () => this.setState({view:'detail', artId:a.id, seg:'tr'})})) : [];
+    const times = ['07:00','07:30','08:00','08:30','09:00'].map(t => ({t, pick: () => this.setState({tmpTime:t}),
+      bg: s.tmpTime === t ? 'rgba(37,99,235,.22)' : 'transparent', col: s.tmpTime === t ? '#E5EAF2' : 'rgba(229,234,242,.45)',
+      fs: s.tmpTime === t ? '22px' : '17px', fw: s.tmpTime === t ? '800' : '600'}));
+    const tabDefs = [['feed','Feed'],['digest','Digest'],['saved','Kaydedilen'],['sources','Kaynaklar'],['settings','Ayarlar']];
+    const tabs = {};
+    tabDefs.forEach(td => { tabs[td[0] + 'C'] = (s.tab === td[0] && s.view === 'tabs') ? A : IN; });
+    return Object.assign({
+      inTabs: s.view === 'tabs', showDetail: s.view === 'detail', showSearch: s.view === 'search',
+      showFeed: s.view === 'tabs' && s.tab === 'feed', showDigest: s.view === 'tabs' && s.tab === 'digest',
+      showSaved: s.view === 'tabs' && s.tab === 'saved', showSources: s.view === 'tabs' && s.tab === 'sources',
+      showSettings: s.view === 'tabs' && s.tab === 'settings',
+      goFeed: () => this.setState({view:'tabs', tab:'feed'}), goDigest: () => this.setState({view:'tabs', tab:'digest'}),
+      goSaved: () => this.setState({view:'tabs', tab:'saved'}), goSources: () => this.setState({view:'tabs', tab:'sources'}),
+      goSettings: () => this.setState({view:'tabs', tab:'settings'}),
+      back: () => this.setState({view:'tabs'}), openSearch: () => this.setState({view:'search'}),
+      feedItems, feedEmpty: feedItems.length === 0, chips, art, savedItems, savedEmpty: savedItems.length === 0,
+      savedCount: savedItems.length, unreadCount: savedItems.filter(a => !s.read[a.id]).length,
+      sources, activeSrc: sources.filter(x => x.on).length,
+      results, hasQ: ql.length > 0, noResults: ql.length > 0 && results.length === 0, q: s.q,
+      onQ: (e) => this.setState({q: e.target.value}),
+      clearQ: () => this.setState({q: ''}),
+      showRecent: ql.length === 0,
+      q1: () => this.setState({q: 'gpt-5.2'}), q2: () => this.setState({q: 'türkçe llm'}), q3: () => this.setState({q: 'alphafold'}),
+      isSaved: !!s.saved[art.id], bmFill: s.saved[art.id] ? '#60A5FA' : 'none', bmBg: s.saved[art.id] ? 'rgba(96,165,250,.14)' : 'transparent',
+      toggleSave: () => { const sv = Object.assign({}, s.saved); if (sv[art.id]) { delete sv[art.id]; this.toastMsg('Kayıt kaldırıldı'); } else { sv[art.id] = true; this.toastMsg('Kaydedildi'); } this.setState({saved: sv}); },
+      segTr: s.seg === 'tr', segTrBg: s.seg === 'tr' ? '#2563EB' : 'transparent', segTrC: s.seg === 'tr' ? '#fff' : 'rgba(229,234,242,.6)',
+      segEnBg: s.seg === 'en' ? '#2563EB' : 'transparent', segEnC: s.seg === 'en' ? '#fff' : 'rgba(229,234,242,.6)',
+      setTr: () => this.setState({seg:'tr'}), setEn: () => this.setState({seg:'en'}),
+      bodyText: s.seg === 'tr' ? art.body : art.en, bodyLabel: s.seg === 'tr' ? 'Çeviri · Türkçe' : 'Orijinal · English',
+      goSource: () => this.toastMsg('Kaynak tarayıcıda açılır'),
+      trOn: s.translate, trBg: s.translate ? '#2563EB' : '#1B2B47', trJ: s.translate ? 'flex-end' : 'flex-start',
+      toggleTr: () => this.setState({translate: !s.translate}),
+      themeTap: () => this.toastMsg('Prototipte koyu tema sabit — light tema panoda'),
+      digestTime: s.digestTime, sheet: s.sheet, times, tmpTime: s.tmpTime,
+      openSheet: () => this.setState({sheet:true, tmpTime: s.digestTime}), closeSheet: () => this.setState({sheet:false}),
+      saveTime: () => { this.setState({sheet:false, digestTime: this.state.tmpTime}); this.toastMsg('Digest saati güncellendi'); },
+      toast: s.toast, hasToast: !!s.toast
+    }, tabs);
+  }
+}
+</script>
+</body>
+</html>
