@@ -98,3 +98,11 @@ A review or verification dispatch in this project contains:
   DesignSync write methods (`finalize_plan`, `write_files`, `delete_files`)
   unless the human asks for that exact write.
 - Never start the council (Layer 3) on your own initiative.
+- **Codex quota cap (human, 2026-08-21): never exceed 60 % of the codex plan
+  limit.** Before each codex dispatch send `/status` to an idle codex pane and
+  read the usage line; at ≥ 60 % set `[settings] codex_available = false` in
+  `agents/roles.toml` so the fallback blocks (claude opus, or agy / Gemini 3.1
+  Pro) take over, and write the reading to the journal.
+- Supabase deploys go through the Supabase MCP (`apply_migration`,
+  `deploy_edge_function`, `execute_sql`) by the coordinator; no CLI token is
+  stored on this machine and Docker's daemon is normally off.
