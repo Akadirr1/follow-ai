@@ -7,7 +7,9 @@
   veya:                     powershell -ExecutionPolicy Bypass -File scripts/setup-env.ps1
 
   - Var olan .env değerlerini okur; Enter'a basarsan mevcut değer korunur.
-  - Girdiğin değerler ekranda görünmez (SecureString).
+  - Gizli değerler ekranda görünmez (SecureString). EXPO_PUBLIC_* değişkenleri
+    tasarım gereği herkese açıktır; onlar düz metin sorulur ve özet ekranında
+    açıkça gösterilir.
   - ANTHROPIC_API_KEY canlı doğrulanır (GET /v1/models). -SkipVerify ile kapatılır.
   - EXPO_TOKEN isteğe bağlı; -VerifyExpo verilirse `eas whoami` ile doğrulanır
     (eas-cli'yi npx ile indirir, ilk seferde yavaştır).
@@ -19,6 +21,11 @@
   tutulur: Claude çağrıları sunucu tarafında (Expo API route / küçük bir proxy)
   yapılmalıdır. Bu scripti EXPO_PUBLIC_ANTHROPIC_API_KEY yazacak şekilde
   değiştirme.
+
+  Veri kaynağı (P1 seam) — üçü de tasarım gereği herkese açık:
+    EXPO_PUBLIC_DATA_MODE        mock | supabase (varsayılan mock)
+    EXPO_PUBLIC_SUPABASE_URL     proje URL'si
+    EXPO_PUBLIC_SUPABASE_ANON_KEY  anon JWT (koruma RLS ile; service_role DEĞİL)
 
 .PARAMETER SkipVerify
   Anthropic anahtarını canlı doğrulama.
@@ -48,6 +55,24 @@ $Vars = @(
      Prompt = 'Claude modeli (Enter = claude-opus-5)' }
   @{ Name = 'EXPO_TOKEN';        Secret = $true;  Required = $false
      Prompt = 'Expo erisim token (istege bagli; EAS build/submit ve CI icin; expo.dev > Access tokens)' }
+
+  # --- Veri kaynagi (P1 seam). Ucu de TASARIM GEREGI herkese acik: Supabase URL
+  # ve anon JWT istemciye gomulmek uzere yapilmistir, koruma RLS ile saglanir.
+  # Bu yuzden Secret = $false: duz metin girilir ve ozet ekraninda gorunur.
+  @{ Name = 'EXPO_PUBLIC_DATA_MODE'; Secret = $false; Required = $false; Default = 'mock'
+     Prompt = 'Veri kaynagi: mock | supabase (Enter = mock; supabase P6 bitene kadar calismaz)'
+     Pattern = '^(mock|supabase)$'; PatternHint = 'yalnizca mock veya supabase' }
+  @{ Name = 'EXPO_PUBLIC_SUPABASE_URL'; Secret = $false; Required = $false
+     Default = 'https://eglxzbsrewbleqlstefd.supabase.co'
+     Prompt = 'Supabase proje URL (Enter = varsayilan proje)'
+     Pattern = '^https://'; PatternHint = 'https:// ile baslamali' }
+  # Legacy anon JWT: verify_jwt=true olan Edge Function'lar JWT bearer bekliyor
+  # (arch-001.addendum.md, F bolumu). Yeni publishable anahtar
+  # (sb_publishable_FR-7VBv8Y_A6q3FlFzQfug_6u7IVEdY) Edge auth yeniden ele
+  # alindiginda bunun yerini alacak.
+  @{ Name = 'EXPO_PUBLIC_SUPABASE_ANON_KEY'; Secret = $false; Required = $false
+     Default = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnbHh6YnNyZXdibGVxbHN0ZWZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTQyNjYsImV4cCI6MjA4OTg3MDI2Nn0.2R19msD1ozv_feOH9by__Cm12BYSaz6F2hYE2q9JaEE'
+     Prompt = 'Supabase anon JWT (Enter = varsayilan proje anahtari; herkese acik)' }
 )
 
 # ---------------------------------------------------------------- yardımcılar
