@@ -113,6 +113,16 @@ does, concretely enough to be recognised.
   found).
 - `worker-release` reports `releaseState: retained` on this machine and leaves
   the pane open; treat retained panes as settled and idle, not as live workers.
+- **Composed `worker-start --agent codex` parks on codex's hook-trust modal**
+  in this repo (`.codex/hooks.json` is present) and still reports
+  `input_accepted`; measured 2026-08-21 04:30 — the pane sat on "Hooks ·
+  Lifecycle hooks from config and enabled plugins" for an hour with no
+  heartbeat. Always build codex panes by hand:
+  `orca terminal split --command 'codex -c model="gpt-5.6-sol" -c
+  model_reasoning_effort="high" -a on-request --dangerously-bypass-hook-trust'`,
+  wait for `tui-idle`, read the pane, then `worker-start --task … --terminal …`.
+  A dispatch with no heartbeat after ~10 minutes is a parked pane, not a slow
+  worker.
 
 ## Practical traps
 
