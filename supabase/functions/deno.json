@@ -2,21 +2,23 @@
   "$comment": [
     "Import map for the AI Gundem Edge Functions.",
     "",
-    "The version below was pinned WITHOUT registry access (this task has no",
-    "network), so it is a known-good release rather than the newest one.",
-    "Coordinator: confirm or bump it before the first deploy, and keep it exact",
-    "- a floating '@2' would let a breaking minor land between two deploys of",
-    "the same code.",
+    "Pins are exact on purpose: a floating '@2' would let a breaking minor land",
+    "between two deploys of the same code. supabase-js 2.112.3 = npm latest as",
+    "measured by the coordinator on 2026-08-21 (P3 had pinned 2.45.4 offline).",
     "",
-    "Nothing under _shared/ imports this map. Those modules are dependency-free",
-    "on purpose, so the same files run under Deno here and under Jest on Node.",
-    "Only each function's index.ts creates a client."
+    "Nothing under _shared/ imports this map. Those modules are dependency-free on",
+    "purpose, so the same files run under Deno here and under Jest on Node. Only",
+    "each function's index.ts creates a client."
   ],
   "imports": {
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.45.4"
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.3"
   },
   "compilerOptions": {
     "strict": true,
-    "lib": ["deno.window", "dom", "esnext"]
+    "lib": [
+      "deno.window",
+      "dom",
+      "esnext"
+    ]
   }
 }
