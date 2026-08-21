@@ -14,15 +14,35 @@
  * Trigger: pg_cron via pg_net, or a manual call by the coordinator.
  * Auth: `X-Internal-Secret` only, resolved from Vault (see `_shared/secret.ts`).
  *
+ * P12: `prepare` also ENQUEUES the day's enrichment candidates. Before that,
+ * nothing ever enqueued a job except a human opening an article, so the digest
+ * counted zero enriched candidates every morning and stayed `preparing`
+ * forever. The candidate selection is `internal_enqueue_digest_candidates`
+ * (migration 0012); the orchestration is `../_shared/digest-enqueue.ts` and
+ * runs under Jest. `finalize` is unchanged.
+ *
  * Request:  {"digest_date"?: "YYYY-MM-DD", "phase": "prepare"|"finalize"}
  * Response: {"date", "status", "item_count", "missing_enrichments"}
- *           (arch-001 §3)
+ *           (arch-001 §3), plus {"enqueued", "already", "candidates"} and an
+ *           optional "reason" on `prepare`.
  */
 
 import { createClient } from '@supabase/supabase-js';
 
+import { resolveAiProvider } from '../_shared/ai-provider.ts';
 import { readJsonBody, requireMethod } from '../_shared/auth.ts';
-import { createDigestDb, DigestDbError, parseDigestRequest } from '../_shared/digest.ts';
+import {
+  createDigestDb,
+  DigestDbError,
+  parseDigestRequest,
+  type DigestResultRow,
+} from '../_shared/digest.ts';
+import {
+  readDigestLimits,
+  runDigestPrepare,
+  type DigestEnqueueReport,
+} from '../_shared/digest-enqueue.ts';
+import { PROMPT_VERSION } from '../_shared/prompt.ts';
 import {
   AppError,
   errorResponse,
@@ -100,8 +120,35 @@ Deno.serve(async (request: Request): Promise<Response> => {
     // has real timezone data, so the answer stays correct even if Türkiye ever
     // reinstates seasonal clock changes.
     const { digestDate, phase } = parsed.value;
-    const result =
-      phase === 'prepare' ? await db.prepare(digestDate) : await db.finalize(digestDate);
+
+    let result: DigestResultRow;
+    let enqueue: DigestEnqueueReport | null = null;
+
+    if (phase === 'prepare') {
+      // P12. The provider is resolved through the SAME env-then-Vault path
+      // `process-enrichments` uses, because its model string is half the
+      // summary cache key: enqueueing under anything else would produce
+      // summaries no lookup could ever match. No key value is read here — only
+      // the model string — and no provider is ever called.
+      const prepared = await runDigestPrepare(
+        {
+          db,
+          resolveProvider: () =>
+            resolveAiProvider(
+              { get: (name) => Deno.env.get(name) },
+              (name) => db.getSetting(name),
+              { fetchImpl: fetch },
+            ),
+          promptVersion: PROMPT_VERSION,
+          limits: readDigestLimits({ get: (name) => Deno.env.get(name) }),
+        },
+        digestDate,
+      );
+      result = prepared.row;
+      enqueue = prepared.enqueue;
+    } else {
+      result = await db.finalize(digestDate);
+    }
 
     console.log(
       JSON.stringify({
@@ -112,6 +159,16 @@ Deno.serve(async (request: Request): Promise<Response> => {
         status: result.status,
         item_count: result.item_count,
         missing_enrichments: result.missing,
+        ...(enqueue
+          ? {
+              provider: enqueue.provider,
+              model: enqueue.model,
+              enqueued: enqueue.enqueued,
+              already: enqueue.already,
+              candidates: enqueue.candidates,
+              ...(enqueue.reason ? { reason: enqueue.reason } : {}),
+            }
+          : {}),
       }),
     );
 
@@ -121,6 +178,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
         status: result.status,
         item_count: result.item_count,
         missing_enrichments: result.missing,
+        ...(enqueue
+          ? {
+              enqueued: enqueue.enqueued,
+              already: enqueue.already,
+              candidates: enqueue.candidates,
+              ...(enqueue.reason ? { reason: enqueue.reason } : {}),
+            }
+          : {}),
       },
       200,
       requestId,

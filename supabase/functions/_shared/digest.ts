@@ -279,9 +279,39 @@ export type DigestResultRow = {
   missing: number;
 };
 
+/**
+ * What `internal_enqueue_digest_candidates` (migration 0012) reports.
+ *
+ * `candidates` is the size of the selected set, `enqueued` how many of them
+ * were new jobs, and `already` the rest — a job for that exact
+ * (article, content_hash, prompt_version, model) already existed in some state.
+ * A second prepare on the same day is therefore expected to read
+ * `enqueued: 0, already: n`, which is what idempotence looks like from outside.
+ */
+export type DigestCandidatesRow = {
+  enqueued: number;
+  already: number;
+  candidates: number;
+};
+
 export type DigestDb = {
   prepare(date: string | null): Promise<DigestResultRow>;
   finalize(date: string | null): Promise<DigestResultRow>;
+  /**
+   * Asks the database to enqueue the window's un-summarised articles (P12).
+   *
+   * The model MUST be the one the worker will resolve, not a plausible default:
+   * it is half the summary cache key, so a mismatch produces summaries that
+   * `internal_digest_finalize` — which joins on the article's own content_hash
+   * only — would pick up, but that `request-enrichment` would never find again.
+   */
+  enqueueCandidates(input: {
+    date: string | null;
+    model: string;
+    promptVersion: string;
+    perSource: number;
+    limit: number;
+  }): Promise<DigestCandidatesRow>;
   /** Reads the Vault secret through the allow-listed wrapper. */
   getSetting(name: string): Promise<string | null>;
 };
@@ -313,9 +343,11 @@ export function createDigestDb(
     return data as T;
   }
 
-  const firstRow = (data: DigestResultRow[] | DigestResultRow | null): DigestResultRow => {
+  const firstRow = <T>(data: T[] | T | null, what = 'Digest wrapper'): T => {
     const row = Array.isArray(data) ? (data[0] ?? null) : data;
-    if (!row) throw new DigestDbError('Digest wrapper returned no row.');
+    if (row === null || row === undefined) {
+      throw new DigestDbError(`${what} returned no row.`);
+    }
     return row;
   };
 
@@ -333,6 +365,22 @@ export function createDigestDb(
         await call<DigestResultRow[] | DigestResultRow | null>('internal_digest_finalize', {
           p_date: date,
         }),
+      );
+    },
+
+    async enqueueCandidates(input) {
+      return firstRow(
+        await call<DigestCandidatesRow[] | DigestCandidatesRow | null>(
+          'internal_enqueue_digest_candidates',
+          {
+            p_date: input.date,
+            p_model: input.model,
+            p_prompt_version: input.promptVersion,
+            p_per_source: input.perSource,
+            p_limit: input.limit,
+          },
+        ),
+        'Candidate enqueue',
       );
     },
 
