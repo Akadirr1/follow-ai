@@ -12,7 +12,37 @@
 export type DataMode = 'mock' | 'supabase';
 
 export const DATA_MODES: readonly DataMode[] = ['mock', 'supabase'];
-export const DEFAULT_DATA_MODE: DataMode = 'mock';
+
+/**
+ * Where an unusable configuration lands. Always `mock`: it is the only mode that
+ * works with no backend, and it must stay separate from `DEFAULT_DATA_MODE`
+ * below — if the fallback pointed at the default, a production build with a
+ * missing key would "fall back" to supabase and loop.
+ */
+export const FALLBACK_DATA_MODE: DataMode = 'mock';
+
+/**
+ * What an *unset* `EXPO_PUBLIC_DATA_MODE` means, which differs by build type
+ * (P10): a production bundle should talk to Supabase, while dev and test stay on
+ * the prototype fixtures so nobody needs credentials to run the app or the suite.
+ *
+ * `__DEV__` is the only signal available at module scope that distinguishes the
+ * two, and Metro defines it in every bundle. Jest sets it too, so tests keep
+ * getting `mock` without any per-test configuration.
+ *
+ * An explicit `EXPO_PUBLIC_DATA_MODE` always wins over this — a developer can
+ * point a dev build at Supabase, and a release build can be pinned to mock.
+ */
+export function defaultDataModeFor(isDev: boolean): DataMode {
+  return isDev ? 'mock' : 'supabase';
+}
+
+declare const __DEV__: boolean | undefined;
+
+/** Treat an absent `__DEV__` as a development build: the safer of the two. */
+export const IS_DEV: boolean = typeof __DEV__ === 'boolean' ? __DEV__ : true;
+
+export const DEFAULT_DATA_MODE: DataMode = defaultDataModeFor(IS_DEV);
 
 export type RawEnv = {
   dataMode: string | undefined;
@@ -41,23 +71,26 @@ const isDataMode = (value: string): value is DataMode =>
  * silent fallback to mock would look identical to a working Supabase build until
  * someone noticed the data never changed.
  */
-export function resolveEnv(raw: RawEnv): AppEnv {
+export function resolveEnv(
+  raw: RawEnv,
+  defaults: { defaultMode: DataMode } = { defaultMode: DEFAULT_DATA_MODE },
+): AppEnv {
   const requested = trim(raw.dataMode);
   const url = trim(raw.supabaseUrl);
   const anonKey = trim(raw.supabaseAnonKey);
 
-  let mode: DataMode = DEFAULT_DATA_MODE;
+  let mode: DataMode = defaults.defaultMode;
   if (requested === undefined) {
-    mode = DEFAULT_DATA_MODE;
+    mode = defaults.defaultMode;
   } else if (isDataMode(requested)) {
     mode = requested;
   } else {
     console.warn(
       `[config] EXPO_PUBLIC_DATA_MODE="${requested}" is not one of ${DATA_MODES.join(
         ' | ',
-      )}; falling back to "${DEFAULT_DATA_MODE}".`,
+      )}; falling back to "${FALLBACK_DATA_MODE}".`,
     );
-    mode = DEFAULT_DATA_MODE;
+    mode = FALLBACK_DATA_MODE;
   }
 
   if (mode === 'supabase') {
@@ -68,10 +101,10 @@ export function resolveEnv(raw: RawEnv): AppEnv {
       console.warn(
         `[config] EXPO_PUBLIC_DATA_MODE="supabase" but ${missing.join(
           ' and ',
-        )} ${missing.length === 1 ? 'is' : 'are'} missing; falling back to "${DEFAULT_DATA_MODE}".`,
+        )} ${missing.length === 1 ? 'is' : 'are'} missing; falling back to "${FALLBACK_DATA_MODE}".`,
       );
       return Object.freeze({
-        dataMode: DEFAULT_DATA_MODE,
+        dataMode: FALLBACK_DATA_MODE,
         supabaseUrl: null,
         supabaseAnonKey: null,
       });

@@ -10,7 +10,10 @@
     "web": "expo start --web",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "setup:env": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-env.ps1"
+    "setup:env": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-env.ps1",
+    "check:env": "node scripts/check-env.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "check:release": "npm run typecheck && npm test && node scripts/check-env.mjs && node scripts/check-bundle.mjs && node scripts/check-bundle.mjs --mode=mock"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "0.4.2",
