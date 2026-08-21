@@ -26,7 +26,7 @@ import {
 } from '../repositories';
 import {
   compareArticles,
-  cursorOf,
+  cursorOfArticle,
   isAfterCursor,
   mockArticles,
   mockDigest,
@@ -54,7 +54,7 @@ function paginate(sorted: Article[], cursor: Cursor | null | undefined, limit: n
   const last = items[items.length - 1];
   return {
     items,
-    nextCursor: hasMore && last ? cursorOf(last) : null,
+    nextCursor: hasMore && last ? cursorOfArticle(last) : null,
     hasMore,
   };
 }

@@ -7,6 +7,7 @@
 import { ARTICLES, type Article as MockArticle } from '../../data/articles';
 import { DIGEST } from '../../data/digest';
 import { SOURCES } from '../../data/sources';
+import { cursorOf, isAfterCursor } from '../cursor';
 import type {
   Article,
   ArticleSummary,
@@ -28,7 +29,7 @@ export const MOCK_NOW_ISO = '2026-08-20T06:41:00.000Z';
 const MOCK_NOW_MS = Date.parse(MOCK_NOW_ISO);
 
 /** Measured 2026-08-21 (`agents/reports/facts-2026-08-21.md`). */
-const FEED_URLS: Record<string, string> = {
+const FEED_URLS: Partial<Record<string, string>> = {
   oa: 'https://openai.com/news/rss.xml',
   gd: 'https://deepmind.google/blog/rss.xml',
   hf: 'https://huggingface.co/blog/feed.xml',
@@ -37,7 +38,7 @@ const FEED_URLS: Record<string, string> = {
   wz: 'https://webrazzi.com/kategori/yapay-zeka/feed/',
 };
 
-const SITE_URLS: Record<string, string> = {
+const SITE_URLS: Partial<Record<string, string>> = {
   oa: 'https://openai.com/news',
   an: 'https://www.anthropic.com/news',
   gd: 'https://deepmind.google/discover/blog',
@@ -160,15 +161,14 @@ export const compareArticles = (a: Article, b: Article): number =>
 
 export const mockArticles = (): Article[] => ARTICLES.map(toArticleDto).sort(compareArticles);
 
-export const cursorOf = (article: Article): Cursor => ({
-  publishedAt: article.publishedAt,
-  id: article.id,
-});
+/**
+ * Cursors are minted and compared by `src/data-access/cursor.ts` — the branded
+ * type has exactly one factory (rev-002 N2), so the mock cannot build its own.
+ */
+export const cursorOfArticle = (article: Article): Cursor =>
+  cursorOf(article.publishedAt, article.id);
 
-/** True when `article` sorts strictly after `cursor` in `(publishedAt, id)` DESC. */
-export const isAfterCursor = (article: Article, cursor: Cursor): boolean =>
-  article.publishedAt < cursor.publishedAt ||
-  (article.publishedAt === cursor.publishedAt && article.id < cursor.id);
+export { isAfterCursor };
 
 /**
  * The prototype's digest is five hand-written entries whose titles differ from the

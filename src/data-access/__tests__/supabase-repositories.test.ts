@@ -119,7 +119,7 @@ describe('keyset cursor', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       expect(decodeCursor('not-base64!!')).toBeNull();
-      expect(decodeCursor(encodeCursor({ publishedAt: 'x', id: 'y' }).slice(0, 3))).toBeNull();
+      expect(decodeCursor(encodeCursor(cursorOf('x', 'y')).slice(0, 3))).toBeNull();
       expect(warn).toHaveBeenCalled();
     } finally {
       warn.mockRestore();

@@ -71,3 +71,49 @@ describe('palettes', () => {
     expect(palettes.light).toBe(light);
   });
 });
+
+/**
+ * WCAG 2.x relative luminance and contrast ratio. Written out rather than pulled
+ * from a package because the palette must not gain a dependency, and because the
+ * formula is short enough that reading it is cheaper than trusting one.
+ */
+const relativeLuminance = (hex: string): number => {
+  const value = hex.replace('#', '');
+  const full = value.length === 3 ? value.split('').map((c) => c + c).join('') : value;
+  const channels = [0, 2, 4]
+    .map((i) => parseInt(full.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+};
+
+export const contrastRatio = (a: string, b: string): number => {
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+describe('light theme contrast (rev-002 N4)', () => {
+  it('reproduces the reviewer measurement that rejected #DC2626', () => {
+    // 4.466:1 on the page ground — under the 4.5:1 AA threshold for normal text.
+    expect(contrastRatio('#DC2626', light.appBg)).toBeCloseTo(4.466, 2);
+  });
+
+  it('meets AA for normal text on both light surfaces', () => {
+    expect(contrastRatio(light.danger, light.appBg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(light.danger, light.card)).toBeGreaterThanOrEqual(4.5);
+    // The chosen value, recorded so a future edit has to restate it deliberately.
+    expect(light.danger).toBe('#B91C1C');
+    expect(contrastRatio(light.danger, light.appBg)).toBeCloseTo(5.984, 2);
+    expect(contrastRatio(light.danger, light.card)).toBeCloseTo(6.47, 2);
+  });
+
+  it('keeps the dark danger readable on the dark surfaces', () => {
+    expect(contrastRatio(dark.danger, dark.appBg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(dark.danger, dark.card)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('confirms the toast and body text the reviewer measured as passing', () => {
+    expect(contrastRatio(light.toastText, light.toastBg)).toBeGreaterThanOrEqual(7);
+    expect(contrastRatio(light.text, light.appBg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(dark.text, dark.appBg)).toBeGreaterThanOrEqual(4.5);
+  });
+});

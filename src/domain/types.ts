@@ -24,8 +24,15 @@ export type Language = 'tr' | 'en';
 export type Source = {
   id: SourceId;
   name: string;
-  /** Feed URL (RSS/Atom). Public HTTPS only — arch-001 §1. */
-  feedUrl: string;
+  /**
+   * Feed URL (RSS/Atom). Public HTTPS only — arch-001 §1.
+   *
+   * Null when the publisher has no first-party feed: Anthropic is the measured
+   * case (2026-08-21), and such a source is inactive and not a default. Making
+   * this nullable matches what the mock mapper already produces and what `p1.md`
+   * documents (rev-002 N1); a consumer that needs a URL must check.
+   */
+  feedUrl: string | null;
   /** Human-facing site, when known. */
   siteUrl: string | null;
   category: string;
@@ -102,14 +109,16 @@ export type DigestSnapshot =
 declare const cursorBrand: unique symbol;
 
 /**
- * Opaque pagination cursor over `(publishedAt DESC, id DESC)`. The fields are
- * readable for debugging, but the brand stops callers from fabricating one — a
- * cursor may only come from a `Page` this layer produced, or from `decodeCursor`.
+ * Opaque pagination cursor over `(publishedAt DESC, id DESC)`.
+ *
+ * The brand is **required**, so `{publishedAt, id}` alone does not satisfy the
+ * type (rev-002 N2): a cursor can only come from a `Page` this layer produced or
+ * from `decodeCursor`, which validates. The fields stay readable for debugging.
  */
 export type Cursor = {
   readonly publishedAt: Iso;
   readonly id: string;
-  readonly [cursorBrand]?: true;
+  readonly [cursorBrand]: true;
 };
 
 export type Page<T> = {

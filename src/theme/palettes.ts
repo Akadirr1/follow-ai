@@ -159,7 +159,11 @@ export const light: Palette = {
   white: '#fff', // invariant
 
   text: '#0F1B33', // BOARD
-  danger: '#DC2626', // DERIVED: #E5484D reads ~3.7:1 on #FFFFFF; #DC2626 is the same hue at ~4.8:1.
+  // DERIVED: dark's #E5484D reads ~3.7:1 on white. #DC2626 fixed the card but
+  // still measured 4.466:1 on the #F4F6FB page ground — under AA for normal text
+  // (rev-002 N4). #B91C1C measures 5.984:1 on the page and 6.470:1 on the card,
+  // so danger copy is readable on both light surfaces. Asserted in palettes.test.ts.
+  danger: '#B91C1C',
 
   border: 'rgba(37,99,235,.13)', // BOARD (card border)
   borderStrong: 'rgba(37,99,235,.2)', // BOARD (tile border)

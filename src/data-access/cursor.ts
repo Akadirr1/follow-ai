@@ -1,16 +1,22 @@
 import type { Cursor } from '../domain/types';
 
 /**
- * Keyset cursors over `(published_at DESC, article_id DESC)`.
+ * Keyset cursors over `(publishedAt DESC, id DESC)` — the one place a `Cursor` is
+ * minted, serialised or parsed.
  *
- * The DTO `Cursor` is branded so callers cannot fabricate one; these helpers are
- * the only sanctioned way to make one from a row and to serialise it. Serialising
- * matters because a cursor can end up inside a persisted query cache, where it has
- * to survive JSON round-trips without becoming a plain object a caller could edit.
+ * `Cursor`'s brand is required (rev-002 N2), so `{publishedAt, id}` does not
+ * satisfy the type: the only ways to obtain one are `cursorOf` (from a row this
+ * layer just read) and `decodeCursor` (validated). The single cast lives here,
+ * which is what makes the opacity claim true rather than decorative.
+ *
+ * Serialising matters because a cursor can end up inside a persisted query cache,
+ * where it has to survive a JSON round-trip without becoming a plain object a
+ * caller could edit into an arbitrary offset.
  */
 
-/** Build a cursor from the last row of a page. */
-export const cursorOf = (publishedAt: string, id: string): Cursor => ({ publishedAt, id });
+/** The only place a cursor is created. Both adapters call it. */
+export const cursorOf = (publishedAt: string, id: string): Cursor =>
+  ({ publishedAt, id }) as Cursor;
 
 /** URL-safe base64 of the JSON pair. Opaque to callers by construction. */
 export function encodeCursor(cursor: Cursor): string {
@@ -22,7 +28,11 @@ export function encodeCursor(cursor: Cursor): string {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** Returns null (with a warning) for anything that is not one of ours. */
+/**
+ * Parse an encoded cursor. Returns null (with a warning) for anything that is not
+ * one of ours — a truncated string, a hand-written object, a value from an older
+ * cache version. Callers treat null as "start from the top" rather than crashing.
+ */
 export function decodeCursor(encoded: string): Cursor | null {
   try {
     const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
@@ -35,12 +45,24 @@ export function decodeCursor(encoded: string): Cursor | null {
       console.warn(`[cursor] decoded value is not a cursor: ${json}`);
       return null;
     }
+    if (!parsed.p || !parsed.i) {
+      console.warn('[cursor] decoded cursor has an empty publishedAt or id.');
+      return null;
+    }
     return cursorOf(parsed.p, parsed.i);
   } catch (error) {
     console.warn(`[cursor] could not decode "${encoded}":`, error);
     return null;
   }
 }
+
+/** True when `item` sorts strictly after `cursor` in `(publishedAt, id)` DESC. */
+export const isAfterCursor = (
+  item: { publishedAt: string; id: string },
+  cursor: Cursor,
+): boolean =>
+  item.publishedAt < cursor.publishedAt ||
+  (item.publishedAt === cursor.publishedAt && item.id < cursor.id);
 
 /**
  * The PostgREST filter for "strictly after this cursor" in `(published_at, id)`

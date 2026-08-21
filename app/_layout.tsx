@@ -7,6 +7,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
@@ -15,8 +16,34 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Toast } from '../src/components/Toast';
 import { QueryProvider } from '../src/providers/QueryProvider';
 import { StoreProvider } from '../src/store/StoreProvider';
-import { dark } from '../src/theme/palettes';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
+
+/**
+ * Hold the native splash from the moment this module is evaluated. Everything
+ * before `hideAsync()` is covered by the native splash image, so the first thing
+ * the user sees painted by React is already in the right theme (rev-002 B2).
+ *
+ * It rejects if the splash has already auto-hidden — a race we cannot lose
+ * anything to, so it is logged rather than thrown.
+ */
+SplashScreen.preventAutoHideAsync().catch((error: unknown) => {
+  console.warn('[splash] preventAutoHideAsync failed; the splash may hide early:', error);
+});
+
+/**
+ * The launch gate. Both inputs must be settled before the app may paint:
+ *
+ * - fonts, so no frame renders in the fallback face;
+ * - the stored theme preference, so a user whose preference is light never sees
+ *   a dark React frame first.
+ *
+ * A font *failure* still counts as settled: `ThemeProvider` falls back to the
+ * system face and the app is usable, whereas waiting forever is not.
+ */
+export function isAppReady(input: { fontsLoaded: boolean; fontError: unknown; themeReady: boolean }): boolean {
+  const fontsSettled = input.fontsLoaded || input.fontError != null;
+  return fontsSettled && input.themeReady;
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -35,38 +62,38 @@ export default function RootLayout() {
     }
   }, [fontError]);
 
-  if (!fontsLoaded && !fontError) {
-    // Blank canvas rather than a flash of fallback type. Dark is the primary theme,
-    // so the gate paints dark before the stored preference is known.
-    return <View style={{ flex: 1, backgroundColor: dark.appBg }} />;
-  }
-
+  /**
+   * `ThemeProvider` mounts immediately rather than behind the font gate, so the
+   * preference read runs *in parallel* with font loading instead of starting
+   * after it. Provider order is otherwise P6's: theme → store → query → routes.
+   */
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <StoreProvider>
-          <ThemedApp />
+          <ThemedApp fontsLoaded={fontsLoaded} fontError={fontError} />
         </StoreProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
-/**
- * Inside the provider so it can read the resolved palette. It holds the same blank
- * canvas until the stored preference has been read, so the app never paints one
- * theme and then swaps to the other in front of the user.
- *
- * `QueryProvider` mounts *inside* this gate (arch-001 §4 bootstrap order: theme,
- * then cache restore, then routes) so the persisted query cache is never restored
- * behind a screen that is about to repaint in the other theme.
- */
-function ThemedApp() {
-  const { palette, scheme, isReady } = useTheme();
+function ThemedApp({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: unknown }) {
+  const { palette, scheme, isReady: themeReady } = useTheme();
+  const ready = isAppReady({ fontsLoaded, fontError, themeReady });
 
-  if (!isReady) {
-    return <View style={{ flex: 1, backgroundColor: dark.appBg }} />;
-  }
+  useEffect(() => {
+    if (!ready) return;
+    // Hide only once both inputs are settled; the first painted frame is already
+    // in the resolved theme, so there is nothing to swap in front of the user.
+    SplashScreen.hideAsync().catch((error: unknown) => {
+      console.warn('[splash] hideAsync failed; the splash may stay up:', error);
+    });
+  }, [ready]);
+
+  // Render nothing until ready: a placeholder `View` here would be exactly the
+  // dark React frame this gate exists to prevent. The native splash covers it.
+  if (!ready) return null;
 
   return (
     <QueryProvider>
