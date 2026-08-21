@@ -18,7 +18,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-import { readJsonBody, requireInternalSecret, requireMethod } from '../_shared/auth.ts';
+import { readJsonBody, requireMethod } from '../_shared/auth.ts';
+import {
+  AUTOMATIONS_SECRET_NAME,
+  createInternalSecretResolver,
+  requireResolvedInternalSecret,
+} from '../_shared/secret.ts';
 import {
   AppError,
   errorResponse,
@@ -165,15 +170,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   try {
     requireMethod(request, 'POST');
-    requireInternalSecret(request.headers, Deno.env.get('AUTOMATIONS_SECRET'));
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!supabaseUrl || !serviceKey) {
       throw new AppError('internal_error', 'Database credentials are not configured.');
     }
-
-    const { sourceId, maxSources } = parseRequest(await readJsonBody(request));
 
     const routing = rpcRouting();
     const client = createClient(supabaseUrl, serviceKey, {
@@ -184,6 +186,28 @@ Deno.serve(async (request: Request): Promise<Response> => {
       db: { schema: routing.schema },
       global: { headers: { 'x-request-id': requestId } },
     });
+
+    // The internal secret lives in Supabase Vault, not in Deno.env — no Edge
+    // secret could be set for this project (P5). Resolution needs a database
+    // client, so the client is built first; `requireResolvedInternalSecret`
+    // still rejects a request with no header before looking anything up, so an
+    // unauthenticated caller cannot force a Vault round trip.
+    await requireResolvedInternalSecret(
+      request.headers,
+      createInternalSecretResolver(
+        { get: (name) => Deno.env.get(name) },
+        async () => {
+          const { data, error } = await client.rpc(
+            `${routing.prefix}internal_get_setting`,
+            { p_name: AUTOMATIONS_SECRET_NAME },
+          );
+          if (error) return null;
+          return typeof data === 'string' ? data : null;
+        },
+      ),
+    );
+
+    const { sourceId, maxSources } = parseRequest(await readJsonBody(request));
 
     const result = await runIngestion(
       {

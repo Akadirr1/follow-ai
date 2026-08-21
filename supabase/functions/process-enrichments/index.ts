@@ -23,7 +23,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { createClaudeClient, readAnthropicConfig } from '../_shared/anthropic-deno.ts';
-import { readJsonBody, requireInternalSecret, requireMethod } from '../_shared/auth.ts';
+import { readJsonBody, requireMethod } from '../_shared/auth.ts';
+import {
+  AUTOMATIONS_SECRET_NAME,
+  createInternalSecretResolver,
+  requireResolvedInternalSecret,
+} from '../_shared/secret.ts';
 import { createEnrichmentDb } from '../_shared/enrichment-db.ts';
 import {
   MAX_JOBS_PER_RUN,
@@ -70,13 +75,47 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
   try {
     requireMethod(request, 'POST');
-    requireInternalSecret(request.headers, Deno.env.get('AUTOMATIONS_SECRET'));
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceKey) {
+      throw new AppError('internal_error', 'Database credentials are not configured.');
+    }
+
+    const routing = rpcRouting();
+    const client = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      db: { schema: routing.schema },
+      global: { headers: { 'x-request-id': requestId } },
+    });
+
+    // The internal secret lives in Supabase Vault, not in Deno.env — no Edge
+    // secret could be set for this project (P5). Resolution needs a database
+    // client, so the client is built first; `requireResolvedInternalSecret`
+    // still rejects a request with no header before looking anything up, so an
+    // unauthenticated caller cannot force a Vault round trip.
+    await requireResolvedInternalSecret(
+      request.headers,
+      createInternalSecretResolver(
+        { get: (name) => Deno.env.get(name) },
+        async () => {
+          const { data, error } = await client.rpc(
+            `${routing.prefix}internal_get_setting`,
+            { p_name: AUTOMATIONS_SECRET_NAME },
+          );
+          if (error) return null;
+          return typeof data === 'string' ? data : null;
+        },
+      ),
+    );
 
     const { maxJobs } = parseRequest(await readJsonBody(request));
     const config = readAnthropicConfig();
 
-    // The no-key path returns before any database work, so a keyless project
-    // running this on a 2-minute cron costs one log line per tick.
+    // The no-key path still returns before any JOB is touched. It now costs one
+    // Vault read for authentication, which P4's version avoided by reading the
+    // secret from the environment — unavoidable when the secret lives in the
+    // database, and still nothing that leases, writes or calls Claude.
     if (config.apiKey === null) {
       console.warn(
         JSON.stringify({
@@ -91,19 +130,6 @@ Deno.serve(async (request: Request): Promise<Response> => {
         requestId,
       );
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseUrl || !serviceKey) {
-      throw new AppError('internal_error', 'Database credentials are not configured.');
-    }
-
-    const routing = rpcRouting();
-    const client = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      db: { schema: routing.schema },
-      global: { headers: { 'x-request-id': requestId } },
-    });
 
     const result = await processEnrichments(
       {
