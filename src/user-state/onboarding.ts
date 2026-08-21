@@ -30,6 +30,76 @@ const PERMISSION_STATUSES: readonly PermissionStatus[] = [
 export const isPermissionStatus = (value: unknown): value is PermissionStatus =>
   typeof value === 'string' && (PERMISSION_STATUSES as readonly string[]).includes(value);
 
+/**
+ * The completion marker, as an external store.
+ *
+ * WHY (fix-006): the root layout used to read the marker once in a mount effect
+ * and never again, so `completeOnboarding()` — which only writes KV — could not
+ * tell it anything. `<Stack.Protected guard={completed}>` therefore kept `(tabs)`
+ * unmounted, and the onboarding screen's `router.replace('/(tabs)')` addressed a
+ * route that did not exist: "The action 'REPLACE' … was not handled by any
+ * navigator". The device stayed on onboarding until a cold restart.
+ *
+ * A three-line store fixes it at the source rather than at the call site: the
+ * write publishes, the layout subscribes, and the navigator's own guard does the
+ * navigating. `undefined` means "not read yet" and is what keeps the launch gate
+ * closed, so the distinction between "incomplete" (`null`) and "unknown" has to
+ * survive into the snapshot.
+ */
+export type OnboardingSnapshot = string | null | undefined;
+
+let snapshot: OnboardingSnapshot;
+const listeners = new Set<() => void>();
+let priming: Promise<void> | null = null;
+
+/** Current completion marker without touching storage. Cheap and synchronous. */
+export const getOnboardingSnapshot = (): OnboardingSnapshot => snapshot;
+
+export function subscribeOnboarding(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * Publish a new value. Compares first, because `useSyncExternalStore` re-renders
+ * every subscriber on notification whether or not the value moved. Iterates a
+ * copy so a listener that unsubscribes itself cannot skip the next one.
+ */
+function publishOnboarding(next: OnboardingSnapshot): void {
+  if (next === snapshot) return;
+  snapshot = next;
+  for (const listener of [...listeners]) listener();
+}
+
+/**
+ * Read the marker once and publish it. Memoised: every mounted subscriber calls
+ * this, and a launch must not turn into N storage reads. A failed read publishes
+ * `null` — replaying onboarding is recoverable, hanging on the splash is not.
+ */
+export function primeOnboardingState(storage: KvStore = kv): Promise<void> {
+  priming ??= getOnboardingCompletedAt(storage)
+    .then((value) => {
+      publishOnboarding(value);
+    })
+    .catch((error: unknown) => {
+      console.warn('[onboarding] could not read the completion marker:', error);
+      publishOnboarding(null);
+    });
+  return priming;
+}
+
+/**
+ * Drops the cached snapshot and the memoised read. Test seam only: module state
+ * outlives a test file's `beforeEach` otherwise.
+ */
+export function resetOnboardingStateForTests(): void {
+  snapshot = undefined;
+  priming = null;
+  listeners.clear();
+}
+
 export async function getOnboardingCompletedAt(storage: KvStore = kv): Promise<string | null> {
   const raw = await storage.getItem(P9_KEYS.onboardingCompletedAt);
   if (raw === null) return null;
@@ -82,12 +152,17 @@ export async function completeOnboarding(
 
   const completedAt = now();
   await storage.setItem(P9_KEYS.onboardingCompletedAt, completedAt);
+  // After the write, never before: a publish that outran a failed write would
+  // send the user into tabs with no marker to survive the next launch.
+  publishOnboarding(completedAt);
   return { ok: true, completedAt };
 }
 
 /** Dev/rollback helper: sends the device back through onboarding. */
-export const resetOnboarding = (storage: KvStore = kv): Promise<void> =>
-  storage.removeItem(P9_KEYS.onboardingCompletedAt);
+export async function resetOnboarding(storage: KvStore = kv): Promise<void> {
+  await storage.removeItem(P9_KEYS.onboardingCompletedAt);
+  publishOnboarding(null);
+}
 
 export async function getNotificationId(storage: KvStore = kv): Promise<string | null> {
   const raw = await storage.getItem(P9_KEYS.notificationId);

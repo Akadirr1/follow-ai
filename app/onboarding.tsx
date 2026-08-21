@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,7 +26,6 @@ import { completeOnboarding } from '../src/user-state/onboarding';
 export const NO_SOURCE_NOTICE = 'En az bir kaynak seç.';
 
 export default function OnboardingScreen() {
-  const router = useRouter();
   const { palette } = useTheme();
   const styles = useThemedStyles(createStyles);
   const sources = useSources();
@@ -90,8 +88,15 @@ export default function OnboardingScreen() {
       return;
     }
 
-    // Completion is persisted; the root guard now lets the tabs render.
-    router.replace('/(tabs)');
+    // No navigation here, on purpose (fix-006). `completeOnboarding` publishes
+    // the marker, `_layout`'s guard flips in the same tick, and React Navigation
+    // swaps the stack itself: `onboarding` leaves `routeNames`, its route is
+    // filtered out of the state, and `getStateForRouteNamesChange` pushes the
+    // first screen that is now available — `(tabs)`.
+    //
+    // Navigating from here is what broke: `router.replace('/(tabs)')` ran while
+    // the guard still said `false`, so `(tabs)` was not in the navigator at all
+    // and the action went unhandled.
   };
 
   if (sources.isPending) {

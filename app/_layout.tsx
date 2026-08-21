@@ -9,7 +9,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -17,7 +17,11 @@ import { ToastProvider } from '../src/components/ToastProvider';
 import { QueryProvider } from '../src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 import { useNotificationDeepLink } from '../src/notifications/useNotificationDeepLink';
-import { getOnboardingCompletedAt } from '../src/user-state/onboarding';
+import {
+  getOnboardingSnapshot,
+  primeOnboardingState,
+  subscribeOnboarding,
+} from '../src/user-state/onboarding';
 
 /**
  * Hold the native splash from the moment this module is evaluated. Everything
@@ -52,22 +56,32 @@ export function isAppReady(input: {
 }
 
 /**
- * Whether onboarding has been completed, as a tri-state: `null` while the kv
+ * Whether onboarding has been completed, as a tri-state: `undefined` while the kv
  * read is in flight. It joins the launch gate (P9) so the first painted frame is
  * already the right one — deciding after paint would flash the tabs at a user
  * who has never chosen a source.
+ *
+ * Subscribed rather than read once (fix-006). The previous version took a single
+ * snapshot in a mount effect, so finishing onboarding could not flip the guard
+ * below and `(tabs)` was never mounted for the screen that wanted to navigate
+ * into it. `useSyncExternalStore` is the whole fix: the same store that persists
+ * the marker publishes it, and every mounted subscriber flips together.
+ *
+ * The third argument matters for the web export: static rendering calls
+ * `getServerSnapshot`, and without one React throws during SSR. Server-side the
+ * answer is always "not read yet", which keeps the gate closed and renders
+ * nothing — exactly what the effect-based version did on the server.
  */
 export function useOnboardingState(): { completed: boolean; isReady: boolean } {
-  const [completedAt, setCompletedAt] = useState<string | null | undefined>(undefined);
+  const completedAt = useSyncExternalStore(
+    subscribeOnboarding,
+    getOnboardingSnapshot,
+    getOnboardingSnapshot,
+  );
 
   useEffect(() => {
-    let cancelled = false;
-    getOnboardingCompletedAt().then((value) => {
-      if (!cancelled) setCompletedAt(value);
-    });
-    return () => {
-      cancelled = true;
-    };
+    // Memoised inside the store, so N subscribers still make one read.
+    void primeOnboardingState();
   }, []);
 
   return { completed: Boolean(completedAt), isReady: completedAt !== undefined };

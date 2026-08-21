@@ -6,6 +6,8 @@ import { KV_KEYS, kv } from '../storage/kv';
 import {
   P9_KEYS,
   completeOnboarding,
+  getOnboardingCompletedAt,
+  getOnboardingSnapshot,
   isOnboardingComplete,
   resetOnboarding,
 } from '../user-state/onboarding';
@@ -119,7 +121,7 @@ describe('onboarding screen', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('persists the narrowed selection and the chosen slot, then enters the tabs', async () => {
+  it('persists the narrowed selection and the chosen slot, and lets the guard route', async () => {
     setRepos({ listSources: async () => ok(catalog) });
     renderScreen(<OnboardingScreen />);
     await screen.findByText('OpenAI Blog');
@@ -134,8 +136,13 @@ describe('onboarding screen', () => {
       fireEvent.press(screen.getByText('Başla'));
     });
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(tabs)'));
-    expect(await isOnboardingComplete()).toBe(true);
+    await waitFor(async () => expect(await isOnboardingComplete()).toBe(true));
+    // fix-006: the screen must NOT navigate. `(tabs)` only exists in the
+    // navigator once the guard has flipped, so a replace from here raced the
+    // guard and went unhandled ("The action 'REPLACE' … was not handled").
+    // The transition is now the published snapshot plus `<Stack.Protected>`.
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(getOnboardingSnapshot()).toBe(await getOnboardingCompletedAt());
     expect(JSON.parse((await kv.getItem(KV_KEYS.enabledSourceIds)) as string)).toEqual(['s1']);
     const settings = JSON.parse((await kv.getItem(KV_KEYS.settings)) as string) as {
       digestTime: string;
