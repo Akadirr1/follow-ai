@@ -19,7 +19,7 @@ import {
 import { contentHashHex, urlHashHex } from '../functions/_shared/hash.ts';
 import { parseFeed } from '../functions/_shared/feed.ts';
 import type { LeasedSource } from '../functions/_shared/supabase-admin.ts';
-import { RSS_OPENAI, RSS_WEBRAZZI } from './fixtures/feeds.ts';
+import { RSS_HUGGINGFACE, RSS_OPENAI, RSS_WEBRAZZI } from './fixtures/feeds.ts';
 
 const NOW = new Date('2026-08-21T12:00:00Z');
 
@@ -109,7 +109,7 @@ describe('toArticleRows', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].url_hash).toBe(await urlHashHex(rows[0].canonical_url));
     expect(rows[0].content_hash).toBe(
-      await contentHashHex(rows[0].title, rows[0].content_text),
+      await contentHashHex(rows[0].title, rows[0].content_text ?? ''),
     );
     // 32-byte bytea, per P2's octet_length checks.
     expect(rows[0].url_hash).toMatch(/^[0-9a-f]{64}$/);
@@ -138,6 +138,47 @@ describe('toArticleRows', () => {
     expect(indented).toBe(flat);
   });
 
+  /**
+   * fix-003. Hugging Face publishes headlines only, so these rows must reach the
+   * database as NULL rather than '': the column then says "this feed has no
+   * bodies" instead of "the body was blank", which is what
+   * `request-enrichment` reads to answer `unavailable` instead of queueing a
+   * summary that could never be produced.
+   */
+  it('stores absent bodies as NULL, not as empty strings', async () => {
+    const feed = parseFeed(RSS_HUGGINGFACE, 'https://huggingface.co/blog/feed.xml', {
+      now: NOW,
+    })!;
+    const rows = await toArticleRows(feed.items, { language: 'en', category: 'Açık Kaynak' });
+
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.content_text).toBeNull();
+      expect(row.excerpt).toBeNull();
+      // P2's articles_full_requires_text only permits 'full' with a real body.
+      expect(row.content_quality).toBe('excerpt');
+      // Still a complete, insertable row.
+      expect(row.title.length).toBeGreaterThan(0);
+      expect(row.canonical_url.startsWith('https://')).toBe(true);
+      expect(row.url_hash).toMatch(/^[0-9a-f]{64}$/);
+    }
+  });
+
+  it('still computes a content hash for a bodyless article, over (title, "")', async () => {
+    const feed = parseFeed(RSS_HUGGINGFACE, 'https://huggingface.co/blog/feed.xml', {
+      now: NOW,
+    })!;
+    const rows = await toArticleRows(feed.items, { language: 'en', category: 'Açık Kaynak' });
+
+    for (const row of rows) {
+      expect(row.content_hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(row.content_hash).toBe(await contentHashHex(row.title, ''));
+    }
+    // Two different headlines still hash differently, so a corrected headline
+    // invalidates any cached summary exactly as a rewritten body would.
+    expect(rows[0].content_hash).not.toBe(rows[1].content_hash);
+  });
+
   it('drops a non-https link rather than letting the insert fail', async () => {
     const rows = await toArticleRows(
       [
@@ -159,6 +200,28 @@ describe('toArticleRows', () => {
 });
 
 describe('ingestOneSource', () => {
+  it('reports how many ingested items had no body', async () => {
+    // A headlines-only source reports inserted === contentless. That is normal,
+    // and it is the number that proves the Hugging Face fix landed.
+    const { gateway } = fakeGateway();
+    const outcome = await ingestOneSource(
+      deps(gateway, async () => okFetch(RSS_HUGGINGFACE)),
+      source(),
+    );
+
+    expect(outcome).toMatchObject({ ok: true, code: 'ok', contentlessItems: 2 });
+    expect(outcome.skippedItems).toBe(0);
+  });
+
+  it('reports zero contentless for a feed whose items all have bodies', async () => {
+    const { gateway } = fakeGateway();
+    const outcome = await ingestOneSource(
+      deps(gateway, async () => okFetch(RSS_OPENAI)),
+      source(),
+    );
+    expect(outcome.contentlessItems).toBe(0);
+  });
+
   it('records success, the new validators and the 15-minute cadence', async () => {
     const { gateway, calls } = fakeGateway();
     const outcome = await ingestOneSource(

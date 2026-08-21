@@ -119,6 +119,21 @@ Deno.serve(async (request: Request): Promise<Response> => {
       );
     }
 
+    if (result.status === 'unavailable') {
+      // 200, not an error: nothing went wrong, this article simply has no body
+      // to summarise. Terminal and cacheable — the client renders "Bu haber
+      // için özet üretilemiyor" with a link to the source, and never polls.
+      return jsonResponse(
+        {
+          status: 'unavailable',
+          reason: result.reason,
+          client_request_id: input.clientRequestId,
+        },
+        200,
+        requestId,
+      );
+    }
+
     if (result.status === 'ready') {
       return jsonResponse(
         {

@@ -44,7 +44,6 @@ export type SkipReason =
   | 'unparseable_link'
   | 'no_title'
   | 'no_date'
-  | 'no_content'
   | 'item_cap';
 
 export type ParsedFeed = {
@@ -52,8 +51,19 @@ export type ParsedFeed = {
   title: string;
   siteUrl: string | null;
   items: ParsedItem[];
-  /** Per-reason counts of items that were dropped. Never fatal. */
+  /** Per-reason counts of items that were DROPPED. Never fatal. */
   skipped: Record<SkipReason, number>;
+  /**
+   * How many emitted items carry no body at all.
+   *
+   * Deliberately NOT part of `skipped`: these items are kept, and `ingest.ts`
+   * sums `skipped` into the run's "skipped items" figure. Counting a kept item
+   * there would corrupt that number. This is the signal that a feed publishes
+   * headlines only — Hugging Face publishes 845 of them — so a source that
+   * ingests everything with `contentless === items.length` is behaving
+   * normally, not failing.
+   */
+  contentless: number;
 };
 
 export type ParseFeedOptions = {
@@ -81,7 +91,6 @@ function emptySkipped(): Record<SkipReason, number> {
     unparseable_link: 0,
     no_title: 0,
     no_date: 0,
-    no_content: 0,
     item_cap: 0,
   };
 }
@@ -137,12 +146,15 @@ function parseRss(
     if (item) items.push(item);
   }
 
+  const contentless = items.filter((item) => item.contentText === '').length;
+
   return {
     kind,
     title: clamp(childText(channel, 'title'), MAX_TITLE),
     siteUrl: tryCanonicalizeUrl(childText(channel, 'link')) ?? null,
     items,
     skipped,
+    contentless,
   };
 }
 
@@ -181,14 +193,17 @@ function mapRssItem(
   // `content:encoded` is the full article; `description` is usually a teaser.
   // Of the six seeded feeds only Webrazzi ships content:encoded, so only
   // Webrazzi yields content_quality = 'full' (facts-2026-08-21).
+  //
+  // A MISSING BODY IS NOT A REASON TO DROP THE ITEM. Hugging Face publishes
+  // `<title>`, `<link>`, `<pubDate>`, `<guid>` and nothing else — 845 items,
+  // every one of them — so skipping bodyless items meant a seeded default
+  // source that never showed a single article. A headline and a link are still
+  // a usable feed entry: the card renders, the link works, and only the AI
+  // summary is unavailable (`request-enrichment` answers `unavailable`).
   const encoded = childText(node, 'content:encoded', 'encoded');
   const description = childText(node, 'description', 'summary');
   const contentHtml = encoded !== '' ? encoded : description;
   const contentText = clamp(htmlToText(contentHtml), MAX_CONTENT_TEXT);
-  if (contentText === '') {
-    skipped.no_content += 1;
-    return null;
-  }
 
   const guid = childText(node, 'guid');
   const externalId = clamp(guid !== '' ? guid : canonicalUrl, MAX_EXTERNAL_ID);
@@ -203,7 +218,7 @@ function mapRssItem(
     publishedAt,
     contentText,
     excerpt: makeExcerpt(htmlToText(description) || contentText),
-    quality: encoded !== '' ? 'full' : 'excerpt',
+    quality: encoded !== '' && contentText !== '' ? 'full' : 'excerpt',
   };
 }
 
@@ -235,12 +250,15 @@ function parseAtom(
     if (item) items.push(item);
   }
 
+  const contentless = items.filter((item) => item.contentText === '').length;
+
   return {
     kind: 'atom',
     title: clamp(childText(root, 'title'), MAX_TITLE),
     siteUrl: tryCanonicalizeUrl(atomLinkHref(root)) ?? null,
     items,
     skipped,
+    contentless,
   };
 }
 
@@ -281,10 +299,7 @@ function mapAtomEntry(
   const summaryRaw = childText(node, 'summary');
   const contentHtml = contentRaw !== '' ? contentRaw : summaryRaw;
   const contentText = clamp(htmlToText(contentHtml), MAX_CONTENT_TEXT);
-  if (contentText === '') {
-    skipped.no_content += 1;
-    return null;
-  }
+  // Kept even when empty — see the note in mapRssItem.
 
   const id = childText(node, 'id');
   const authorNode = child(node, 'author');
@@ -298,7 +313,7 @@ function mapAtomEntry(
     publishedAt,
     contentText,
     excerpt: makeExcerpt(htmlToText(summaryRaw) || contentText),
-    quality: contentRaw !== '' ? 'full' : 'excerpt',
+    quality: contentRaw !== '' && contentText !== '' ? 'full' : 'excerpt',
   };
 }
 

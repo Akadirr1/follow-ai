@@ -231,7 +231,14 @@ Deno.serve(async (request: Request): Promise<Response> => {
         run_id: result.run_id,
         sources_ok: result.sources_ok,
         sources_failed: result.sources_failed,
-        outcomes: result.outcomes.map((o) => ({ slug: o.slug, code: o.code })),
+        outcomes: result.outcomes.map((o) => ({
+          slug: o.slug,
+          code: o.code,
+          inserted: o.inserted,
+          // A headlines-only feed reports inserted === contentless. That is
+          // normal, and it is the line that proves the Hugging Face fix landed.
+          contentless: o.contentlessItems,
+        })),
       }),
     );
 

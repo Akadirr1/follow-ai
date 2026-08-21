@@ -158,6 +158,14 @@ export type QueuedReason = 'no_api_key' | 'previous_attempt_failed';
 
 export type RequestEnrichmentResult =
   | { status: 'ready'; summary: SummaryRow }
+  /**
+   * The article has no body to summarise — the feed published a headline and a
+   * link and nothing else (Hugging Face). TERMINAL and cacheable: no job is
+   * enqueued, because no amount of retrying produces a body, and the client
+   * shows "Bu haber için özet üretilemiyor" with a link to the source instead
+   * of a spinner that never resolves.
+   */
+  | { status: 'unavailable'; reason: 'no_content' }
   | { status: 'queued'; pollAfterSeconds: number; reason?: QueuedReason; jobId: string }
   | { status: 'rate_limited'; retryAfterSeconds: number; scope: 'check' | 'miss' }
   | { status: 'not_found' };
@@ -208,6 +216,14 @@ export async function requestEnrichment(
   );
   if (existing) return { status: 'ready', summary: existing };
 
+  // Nothing to summarise. Checked AFTER the cache so an article enriched before
+  // its body went missing still serves its stored summary, and BEFORE the miss
+  // budget so a user browsing a headlines-only source is not charged for an
+  // answer that costs no Claude call at all.
+  if (!hasEnrichableBody(article)) {
+    return { status: 'unavailable', reason: 'no_content' };
+  }
+
   // A miss is about to cost a Claude call, so it comes out of the tight budget.
   const missWindow = windowFor(now, MISS_POLICY.windowSeconds);
   const missAllowed = await deps.db.bumpRateLimit(
@@ -250,6 +266,18 @@ export async function requestEnrichment(
       reason === undefined ? POLL_AFTER_SECONDS : POLL_AFTER_SECONDS_NO_KEY,
     ...(reason ? { reason } : {}),
   };
+}
+
+/**
+ * Is there anything for Claude to read?
+ *
+ * `internal_find_article_for_enrichment` and `internal_lease_enrichment_jobs`
+ * both return `coalesce(nullif(content_text, ''), excerpt, '')`, so an empty
+ * string here already means "no body AND no excerpt" — one check covers both
+ * columns, and it reads the same whether the row stores NULL or ''.
+ */
+export function hasEnrichableBody(article: Pick<ArticleForEnrichment, 'content_text'>): boolean {
+  return (article.content_text ?? '').trim() !== '';
 }
 
 // ---------------------------------------------------------------------------
@@ -361,6 +389,17 @@ export async function runOneJob(
   job: EnrichmentJob,
 ): Promise<JobOutcome> {
   const base = { jobId: job.job_id, articleId: job.article_id, attempt: job.attempt_count };
+
+  // Defensive: `request-enrichment` no longer enqueues a bodyless article, but
+  // a job queued before that rule existed is still sitting in the table. Fail
+  // it terminally rather than paying Claude to summarise an empty string —
+  // retrying cannot help, because the body is not coming.
+  if (!hasEnrichableBody(job)) {
+    const failed = await deps.db.failJob(job.job_id, job.lease_token, 'no_content');
+    return failed
+      ? { ...base, disposition: 'failed', code: 'no_content' }
+      : { ...base, disposition: 'lease_lost', code: 'lease_lost' };
+  }
 
   // The one-escalation rule: a job whose previous attempt was truncated gets a
   // bigger ceiling now. If it truncates AGAIN it is failed rather than retried,

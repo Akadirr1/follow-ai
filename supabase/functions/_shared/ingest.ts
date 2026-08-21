@@ -58,6 +58,12 @@ export type SourceOutcome = {
   unchanged: number;
   failedItems: number;
   skippedItems: number;
+  /**
+   * Emitted items that carry no body. Not a failure: it is how a
+   * headlines-only feed looks. Surfaced so a run against Hugging Face reads
+   * "845 inserted, 845 contentless" instead of looking like a silent bug.
+   */
+  contentlessItems: number;
 };
 
 export type IngestionResult = {
@@ -162,6 +168,7 @@ export async function ingestOneSource(
     unchanged: 0,
     failedItems: 0,
     skippedItems: 0,
+    contentlessItems: 0,
   };
 
   try {
@@ -210,6 +217,7 @@ export async function ingestOneSource(
       unchanged: result.unchanged,
       failedItems: result.failed,
       skippedItems,
+      contentlessItems: feed.contentless,
     };
   } catch (cause) {
     // Includes a failed upsert or a failed state write: the run continues.
@@ -275,10 +283,14 @@ export async function toArticleRows(
       category: source.category,
       published_at: item.publishedAt,
       language: source.language,
-      content_text: item.contentText,
+      // Absent, not empty: a bodyless item stores NULL so the column says
+      // "this feed publishes headlines" rather than "the body was blank".
+      // The content hash is still computed over (title, ''), so a later
+      // edit to the headline still invalidates any cached summary.
+      content_text: item.contentText === '' ? null : item.contentText,
       content_quality: item.quality,
       content_hash: await contentHashHex(item.title, item.contentText),
-      excerpt: item.excerpt,
+      excerpt: item.excerpt === '' ? null : item.excerpt,
     });
   }
   return rows;

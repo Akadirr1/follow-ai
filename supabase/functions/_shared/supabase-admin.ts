@@ -74,11 +74,17 @@ export type ArticleUpsertRow = {
   category: Category;
   published_at: string;
   language: ArticleLanguage;
-  content_text: string;
+  /**
+   * Null when the feed published no body at all — Hugging Face ships title,
+   * link and date only. Empty and absent are kept distinct: the column is
+   * nullable, and `request-enrichment` uses "no body" to answer `unavailable`
+   * rather than queueing a summary that could never be written.
+   */
+  content_text: string | null;
   content_quality: ContentQuality;
   /** 64 hex chars. */
   content_hash: string;
-  excerpt: string;
+  excerpt: string | null;
 };
 
 export type UpsertArticlesResult = {

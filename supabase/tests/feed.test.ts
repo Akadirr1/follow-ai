@@ -13,11 +13,13 @@ import {
 } from '../functions/_shared/feed.ts';
 import { decodeEntities, findFirst, parseXml } from '../functions/_shared/xml.ts';
 import {
+  ATOM_CONTENTLESS,
   ATOM_GENERIC,
   HTML_WITHOUT_FEED_LINK,
   HTML_WITH_FEED_LINK,
   NOT_XML_AT_ALL,
   RSS_ARXIV,
+  RSS_BODY_STRIPS_TO_NOTHING,
   RSS_HUGGINGFACE,
   RSS_MALFORMED_ITEMS,
   RSS_OPENAI,
@@ -138,6 +140,65 @@ describe('parseFeed: RSS', () => {
     expect(item.externalId).toBe('https://huggingface.co/blog/open-weights');
     expect(item.canonicalUrl).toBe('https://huggingface.co/blog/open-weights');
   });
+
+  /**
+   * fix-003. The live Hugging Face feed publishes title, link, guid and pubDate
+   * and nothing else — 845 items, every one of them — so the old "skip anything
+   * without a body" rule silently ingested zero articles from a seeded default
+   * source. The catalogue promised a source that never showed anything.
+   */
+  it('keeps every item of a headlines-only feed instead of ingesting nothing', () => {
+    const feed = parseFeed(RSS_HUGGINGFACE, 'https://huggingface.co/blog/feed.xml', {
+      now: NOW,
+    })!;
+
+    expect(feed.items).toHaveLength(2);
+    expect(feed.contentless).toBe(2);
+    // Nothing was dropped: a missing body is not a defect in the item.
+    expect(Object.values(feed.skipped).reduce((a, b) => a + b, 0)).toBe(0);
+
+    for (const item of feed.items) {
+      expect(item.contentText).toBe('');
+      expect(item.excerpt).toBe('');
+      // An empty body can never be 'full'.
+      expect(item.quality).toBe('excerpt');
+      // The parts that make the card renderable are all present.
+      expect(item.title.length).toBeGreaterThan(0);
+      expect(item.canonicalUrl.startsWith('https://')).toBe(true);
+      expect(Number.isNaN(Date.parse(item.publishedAt))).toBe(false);
+    }
+  });
+
+  it('keeps an item whose body exists but strips to nothing', () => {
+    // Distinct from the Hugging Face shape: here the element is present and
+    // survives HTML stripping as an empty string. Both are kept.
+    const feed = parseFeed(RSS_BODY_STRIPS_TO_NOTHING, 'https://example.org/feed.xml', {
+      now: NOW,
+    })!;
+    expect(feed.items).toHaveLength(1);
+    expect(feed.items[0].contentText).toBe('');
+    expect(feed.items[0].quality).toBe('excerpt');
+    expect(feed.contentless).toBe(1);
+  });
+
+  it('keeps a bodyless Atom entry too', () => {
+    const feed = parseFeed(ATOM_CONTENTLESS, 'https://example.org/feed.xml', { now: NOW })!;
+    expect(feed.items).toHaveLength(1);
+    expect(feed.items[0]).toMatchObject({
+      title: 'An entry with no body',
+      contentText: '',
+      excerpt: '',
+      quality: 'excerpt',
+    });
+    expect(feed.contentless).toBe(1);
+  });
+
+  it('still counts a feed whose items all have bodies as contentless: 0', () => {
+    expect(parseFeed(RSS_OPENAI, 'https://openai.com/news/rss.xml', { now: NOW })!.contentless)
+      .toBe(0);
+    expect(parseFeed(ATOM_GENERIC, 'https://example.org/feed.xml', { now: NOW })!.contentless)
+      .toBe(0);
+  });
 });
 
 describe('parseFeed: Atom', () => {
@@ -166,15 +227,18 @@ describe('parseFeed: failure isolation', () => {
     const feed = parseFeed(RSS_MALFORMED_ITEMS, 'https://example.org/feed.xml', {
       now: NOW,
     })!;
-    expect(feed.items.map((i) => i.title)).toEqual(['Good one']);
+    // "No content" is now KEPT (fix-003): a headline and a link are still a
+    // usable entry, and dropping them cost Hugging Face all 845 of its items.
+    // Only title, link and date are load-bearing.
+    expect(feed.items.map((i) => i.title)).toEqual(['No content', 'Good one']);
     expect(feed.skipped).toEqual({
       no_title: 1,
       no_link: 1,
       no_date: 2, // unparseable, and a date a century in the future
-      no_content: 1,
       unparseable_link: 0,
       item_cap: 0,
     });
+    expect(feed.contentless).toBe(1);
   });
 
   it('caps the number of items it will take from one run', () => {

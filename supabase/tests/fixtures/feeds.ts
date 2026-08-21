@@ -12,10 +12,16 @@
  *
  *   openai      guid, link, pubDate, description, category      → excerpt
  *   deepmind    guid, link, pubDate, description                → excerpt
- *   huggingface guid (== link), link, pubDate, description       → excerpt
+ *   huggingface guid (== link), link, pubDate — NO BODY AT ALL   → excerpt
  *   arxiv       guid, link, pubDate, description, dc:creator     → excerpt
  *   techcrunch  guid, link, pubDate, description, dc:creator     → excerpt
  *   webrazzi    guid, link, pubDate, content:encoded, dc:creator → FULL
+ *
+ * CORRECTION (fix-003, measured 2026-08-21 09:35): the original shape table
+ * credited Hugging Face with a `<description>`. The live feed has none — its
+ * items are `<title>`, `<link>`, `<guid>`, `<pubDate>` and nothing else, all
+ * 845 of them — which is why the first sync-feeds run ingested 0 HF articles.
+ * The fixture below now matches what the feed actually serves.
  *
  * WHAT THAT MEANS: these prove the parser handles the documented shapes. They
  * do NOT prove it handles the real bytes — real feeds carry namespaces,
@@ -98,7 +104,12 @@ export const RSS_HUGGINGFACE = `<?xml version="1.0" encoding="UTF-8"?>
       <link>https://huggingface.co/blog/open-weights</link>
       <guid>https://huggingface.co/blog/open-weights</guid>
       <pubDate>Mon, 18 Aug 2026 12:00:00 GMT</pubDate>
-      <description>A teaser paragraph.</description>
+    </item>
+    <item>
+      <title>Fine-tuning on a budget</title>
+      <link>https://huggingface.co/blog/cheap-finetune</link>
+      <guid>https://huggingface.co/blog/cheap-finetune</guid>
+      <pubDate>Sun, 17 Aug 2026 09:30:00 GMT</pubDate>
     </item>
   </channel>
 </rss>
@@ -169,3 +180,33 @@ export const HTML_WITHOUT_FEED_LINK = `<!doctype html>
 `;
 
 export const NOT_XML_AT_ALL = 'this is plain text, not a feed at all';
+
+/**
+ * A `<description>` that survives HTML stripping as nothing at all: an image,
+ * a comment, a stray tag. Distinct from Hugging Face's shape, where the element
+ * is absent entirely — both are kept, neither is skipped.
+ */
+export const RSS_BODY_STRIPS_TO_NOTHING = `<rss version="2.0"><channel>
+  <title>Stripped</title>
+  <item>
+    <title>Only an image</title>
+    <link>https://example.org/img-only</link>
+    <pubDate>Wed, 20 Aug 2026 00:00:00 GMT</pubDate>
+    <description>&lt;img src="x.png"&gt;&lt;!-- nothing else --&gt;</description>
+  </item>
+</channel></rss>
+`;
+
+/** Atom's equivalent: an entry with neither `<content>` nor `<summary>`. */
+export const ATOM_CONTENTLESS = `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Headlines only</title>
+  <link rel="alternate" type="text/html" href="https://example.org/"/>
+  <entry>
+    <title>An entry with no body</title>
+    <id>tag:example.org,2026:bare-1</id>
+    <link rel="alternate" type="text/html" href="https://example.org/bare"/>
+    <published>2026-08-20T10:00:00Z</published>
+  </entry>
+</feed>
+`;

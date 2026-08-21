@@ -236,6 +236,59 @@ describe('requestEnrichment', () => {
     expect(names()).not.toContain('enqueueJob');
   });
 
+  /**
+   * fix-003. Hugging Face publishes headlines only, so its articles reach the
+   * database with no body. There is nothing for Claude to read, and no amount
+   * of waiting produces one — so this is terminal and cacheable, not queued.
+   *
+   * The wrappers return coalesce(nullif(content_text, ''), excerpt, ''), so an
+   * empty string here already means "no body AND no excerpt".
+   */
+  it('declines a bodyless article instead of queueing a job that can never finish', async () => {
+    const { db, names } = fakeDb({ article: { ...ARTICLE, content_text: '' } });
+    const result = await requestEnrichment({ ...base, db }, {
+      articleId: ARTICLE_ID,
+      deviceId: DEVICE,
+    });
+
+    expect(result).toEqual({ status: 'unavailable', reason: 'no_content' });
+    expect(names()).not.toContain('enqueueJob');
+  });
+
+  it('does not charge the daily miss budget for an article it declines', async () => {
+    // The answer costs no Claude call, so it must not consume one of the 30
+    // daily misses. Browsing a headlines-only source would otherwise exhaust a
+    // user's enrichment quota on articles that were never enrichable.
+    const { db, calls } = fakeDb({ article: { ...ARTICLE, content_text: '' } });
+    await requestEnrichment({ ...base, db }, { articleId: ARTICLE_ID, deviceId: DEVICE });
+
+    const bumps = calls
+      .filter((c) => c.fn === 'bumpRateLimit')
+      .map((c) => (c.args as { action: string }).action);
+    expect(bumps).toEqual([CHECK_POLICY.action]);
+    expect(bumps).not.toContain(MISS_POLICY.action);
+  });
+
+  it('treats whitespace-only content as no content', async () => {
+    const { db } = fakeDb({ article: { ...ARTICLE, content_text: String.fromCharCode(32, 9, 10, 32) } });
+    const result = await requestEnrichment({ ...base, db }, {
+      articleId: ARTICLE_ID,
+      deviceId: DEVICE,
+    });
+    expect(result).toMatchObject({ status: 'unavailable' });
+  });
+
+  it('still serves a cached summary for an article whose body later went missing', async () => {
+    // The cache check comes first: a summary produced while the body existed is
+    // still a good answer, and throwing it away would be a regression.
+    const { db } = fakeDb({ article: { ...ARTICLE, content_text: '' }, summary: SUMMARY });
+    const result = await requestEnrichment({ ...base, db }, {
+      articleId: ARTICLE_ID,
+      deviceId: DEVICE,
+    });
+    expect(result).toEqual({ status: 'ready', summary: SUMMARY });
+  });
+
   it('reports an unknown article', async () => {
     const { db, names } = fakeDb({ article: null });
     const result = await requestEnrichment({ ...base, db }, {
@@ -376,6 +429,51 @@ describe('processEnrichments', () => {
       maxTokens: MAX_TOKENS_DEFAULT,
       article: { title: 'A model shipped', language: 'en', sourceName: 'OpenAI Blog' },
     });
+  });
+
+  /**
+   * fix-003, defensive. `request-enrichment` no longer enqueues a bodyless
+   * article, but jobs queued before that rule existed are still in the table.
+   */
+  it('refuses a bodyless job without calling Claude, and fails it terminally', async () => {
+    const { db, calls, names } = fakeDb({ jobs: [job({ content_text: '' })] });
+    const client = okClient();
+
+    const result = await processEnrichments({ ...base, db, client });
+
+    // The whole point: no Claude call, so no spend on an empty prompt.
+    expect(client.seen).toEqual([]);
+    expect(result).toMatchObject({ ready: 0, retried: 0, failed: 1 });
+    expect(names()).toContain('failJob');
+    // Terminal, not retried: the body is not coming back.
+    expect(names()).not.toContain('retryJob');
+    expect((calls.find((c) => c.fn === 'failJob')!.args as { errorCode: string }).errorCode).toBe(
+      'no_content',
+    );
+    expect(result.outcomes[0]).toMatchObject({ disposition: 'failed', code: 'no_content' });
+  });
+
+  it('refuses a bodyless job even with attempts to spare', async () => {
+    const { db } = fakeDb({ jobs: [job({ content_text: '   ', attempt_count: 1, max_attempts: 5 })] });
+    const client = okClient();
+    const result = await processEnrichments({ ...base, db, client });
+    expect(client.seen).toEqual([]);
+    expect(result).toMatchObject({ failed: 1, retried: 0 });
+  });
+
+  it('reports a lost lease rather than a failure when refusing a bodyless job', async () => {
+    const { db } = fakeDb({ jobs: [job({ content_text: '' })], writeSucceeds: false });
+    const result = await processEnrichments({ ...base, db, client: okClient() });
+    expect(result.outcomes[0].disposition).toBe('lease_lost');
+    expect(result).toMatchObject({ ready: 0, retried: 0, failed: 0 });
+  });
+
+  it('still enriches a job that does have a body', async () => {
+    const { db } = fakeDb({ jobs: [job()] });
+    const client = okClient();
+    const result = await processEnrichments({ ...base, db, client });
+    expect(client.seen).toHaveLength(1);
+    expect(result).toMatchObject({ ready: 1 });
   });
 
   it('retries a transient failure with a backoff and keeps the attempt count', async () => {
