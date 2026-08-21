@@ -3,15 +3,17 @@
     "Import map for the AI Gundem Edge Functions.",
     "",
     "Pins are exact on purpose: a floating '@2' would let a breaking minor land",
-    "between two deploys of the same code. supabase-js 2.112.3 = npm latest as",
-    "measured by the coordinator on 2026-08-21 (P3 had pinned 2.45.4 offline).",
+    "between two deploys of the same code. Both versions are npm latest as",
+    "measured by the coordinator on 2026-08-21 (P3/P4 have no network).",
     "",
-    "Nothing under _shared/ imports this map. Those modules are dependency-free on",
-    "purpose, so the same files run under Deno here and under Jest on Node. Only",
-    "each function's index.ts creates a client."
+    "One file under _shared/ imports this map: anthropic-deno.ts, which is the",
+    "sole SDK/Deno boundary for the Claude path. Every other _shared module is",
+    "dependency-free on purpose, so the same files run under Deno here and under",
+    "Jest on Node."
   ],
   "imports": {
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.3"
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.3",
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@0.120.0"
   },
   "compilerOptions": {
     "strict": true,
