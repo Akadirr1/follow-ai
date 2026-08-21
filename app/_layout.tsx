@@ -13,9 +13,8 @@ import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { Toast } from '../src/components/Toast';
+import { ToastProvider } from '../src/components/ToastProvider';
 import { QueryProvider } from '../src/providers/QueryProvider';
-import { StoreProvider } from '../src/store/StoreProvider';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 
 /**
@@ -65,14 +64,12 @@ export default function RootLayout() {
   /**
    * `ThemeProvider` mounts immediately rather than behind the font gate, so the
    * preference read runs *in parallel* with font loading instead of starting
-   * after it. Provider order is otherwise P6's: theme → store → query → routes.
+   * after it. Provider order is otherwise P6's: theme gate → query → toast → routes.
    */
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <StoreProvider>
-          <ThemedApp fontsLoaded={fontsLoaded} fontError={fontError} />
-        </StoreProvider>
+        <ThemedApp fontsLoaded={fontsLoaded} fontError={fontError} />
       </ThemeProvider>
     </SafeAreaProvider>
   );
@@ -97,22 +94,23 @@ function ThemedApp({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError
 
   return (
     <QueryProvider>
-      <View style={{ flex: 1, backgroundColor: palette.appBg }}>
-        {/* Light content on a dark ground and vice versa. */}
-        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: palette.appBg },
-            animation: 'slide_from_right',
-          }}
-        >
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="article/[id]" />
-          <Stack.Screen name="search" options={{ animation: 'fade' }} />
-        </Stack>
-        <Toast />
-      </View>
+      <ToastProvider>
+        <View style={{ flex: 1, backgroundColor: palette.appBg }}>
+          {/* Light content on a dark ground and vice versa. */}
+          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: palette.appBg },
+              animation: 'slide_from_right',
+            }}
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="article/[id]" />
+            <Stack.Screen name="search" options={{ animation: 'fade' }} />
+          </Stack>
+        </View>
+      </ToastProvider>
     </QueryProvider>
   );
 }

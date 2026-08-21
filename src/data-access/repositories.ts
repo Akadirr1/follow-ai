@@ -48,6 +48,12 @@ export interface FeedRepositoryV1 {
   searchArticles(params: SearchArticlesParams): Promise<Result<Page<Article>>>;
 }
 
+/** What the add-source sheet can tell the server about a custom feed (P7). */
+export type AddSourceOptions = {
+  category?: string;
+  language?: 'tr' | 'en';
+};
+
 export interface SourceRepositoryV1 {
   readonly version: RepositoryContractVersion;
   /** The catalog's active sources, default and device-added alike. */
@@ -57,7 +63,7 @@ export interface SourceRepositoryV1 {
    * (`invalid_input`, `unsupported_source`, `duplicate_source`, `network`), never
    * a thrown string.
    */
-  addSourceByUrl(url: string): Promise<Result<Source>>;
+  addSourceByUrl(url: string, options?: AddSourceOptions): Promise<Result<Source>>;
 }
 
 export interface DigestRepositoryV1 {

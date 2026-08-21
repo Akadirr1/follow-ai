@@ -1,46 +1,65 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import type { Article } from '../data/articles';
+import type { Article } from '../domain/types';
+import { relativeTimeTr } from '../format/relativeTime';
 import type { Palette } from '../theme/palettes';
 import { useTheme, useThemedStyles } from '../theme/ThemeProvider';
 import { fonts, radius } from '../theme/typography';
 
 /**
- * Feed and search share one card. The only difference in the prototype is the
- * second line: the feed appends " · EN→TR", search shows the time alone.
+ * Feed and search share one card. It now takes the domain `Article` (P1 DTO)
+ * rather than the prototype fixture, so `publishedAt` is an ISO instant and the
+ * "2 saat önce" label is produced here by the formatter.
+ *
+ * The only difference between the two screens is the second line: the feed
+ * appends " · EN→TR" for a translated source, search shows the time alone.
  */
 export function ArticleCard({
   article,
   onPress,
   showTranslationTag,
+  dimmed = false,
+  trailing,
 }: {
   article: Article;
   onPress: () => void;
   showTranslationTag: boolean;
+  /** Saved list dims articles already read (prototype opacity .62). */
+  dimmed?: boolean;
+  /** Saved list puts its delete control here. */
+  trailing?: React.ReactNode;
 }) {
   const { palette } = useTheme();
   const styles = useThemedStyles(createStyles);
+  // A Turkish source is not translated, so the EN→TR tag would be a lie there.
+  const translated = showTranslationTag && article.language !== 'tr';
+  const time = relativeTimeTr(article.publishedAt);
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.card, pressed && { borderColor: palette.borderChip }]}
+      accessibilityLabel={article.title}
+      style={({ pressed }) => [
+        styles.card,
+        dimmed && styles.dimmed,
+        pressed && { borderColor: palette.borderChip },
+      ]}
     >
       <View style={styles.row}>
         <View style={styles.tile}>
           <Text style={styles.tileText}>{article.tile}</Text>
         </View>
         <View style={styles.mid}>
-          <Text style={styles.src}>{article.src}</Text>
-          <Text style={styles.meta}>
-            {showTranslationTag ? `${article.time} · EN→TR` : article.time}
-          </Text>
+          <Text style={styles.src}>{article.sourceName}</Text>
+          <Text style={styles.meta}>{translated ? `${time} · EN→TR` : time}</Text>
         </View>
-        <View style={styles.catPill}>
-          <Text style={styles.catText}>{article.cat}</Text>
-        </View>
+        {trailing ?? (
+          <View style={styles.catPill}>
+            <Text style={styles.catText}>{article.category}</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.title}>{article.title}</Text>
     </Pressable>
@@ -62,6 +81,7 @@ const createStyles = (palette: Palette) => ({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
+  dimmed: { opacity: 0.62 },
   row: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
   tile: {
     width: 36,

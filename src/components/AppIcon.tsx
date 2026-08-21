@@ -1,7 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { colors, fonts } from '../theme/tokens';
+import type { Palette } from '../theme/palettes';
+import { useThemedStyles } from '../theme/ThemeProvider';
+import { fonts } from '../theme/typography';
 
 /**
  * Placeholder for the prototype's app icon (`uploads/ikon1.png` / `ikon3.png`).
@@ -10,6 +12,7 @@ import { colors, fonts } from '../theme/tokens';
  * Swap this one component when the real asset exists.
  */
 export function AppIcon({ size, radius }: { size: number; radius?: number }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View
       style={[
@@ -24,16 +27,16 @@ export function AppIcon({ size, radius }: { size: number; radius?: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: Palette) => ({
   box: {
-    backgroundColor: colors.tile,
+    backgroundColor: palette.tile,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: palette.borderStrong,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   label: {
-    color: colors.lightAccent,
+    color: palette.lightAccent,
     fontFamily: fonts.xb,
   },
 });

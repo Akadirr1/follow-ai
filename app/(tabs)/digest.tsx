@@ -1,115 +1,188 @@
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../../src/components/AppIcon';
-import {
-  DIGEST,
-  DIGEST_DATE,
-  DIGEST_HEADLINE,
-  DIGEST_META,
-} from '../../src/data/digest';
-import { useStore } from '../../src/store/StoreProvider';
-import { colors, fonts, mono, radius } from '../../src/theme/tokens';
+import { EmptyState } from '../../src/components/EmptyState';
+import { ErrorState, LoadingState } from '../../src/components/StateViews';
+import { useDigest } from '../../src/data-access/hooks';
+import { openArticle } from '../../src/navigation/openArticle';
+import type { Palette } from '../../src/theme/palettes';
+import { useThemedStyles } from '../../src/theme/ThemeProvider';
+import { fonts, mono, radius, TAB_BAR_SPACE } from '../../src/theme/typography';
+import { useUserSettings } from '../../src/user-state/hooks';
 
-/** Static in the prototype apart from the digest time badge. */
+const MONTHS_TR_UPPER = [
+  'OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN',
+  'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK',
+];
+const DAYS_TR_UPPER = [
+  'PAZAR', 'PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ',
+];
+
+/** "20 AĞUSTOS 2026 · PERŞEMBE" from the digest's own `YYYY-MM-DD`. */
+export function digestDateLine(isoDate: string): string {
+  const date = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    console.warn(`[digest] "${isoDate}" is not a parseable date.`);
+    return '';
+  }
+  return `${date.getDate()} ${MONTHS_TR_UPPER[date.getMonth()]} ${date.getFullYear()} · ${
+    DAYS_TR_UPPER[date.getDay()]
+  }`;
+}
+
 export default function DigestScreen() {
-  const { digestTime } = useStore();
+  const router = useRouter();
+  const styles = useThemedStyles(createStyles);
+  const digest = useDigest();
+  const { settings } = useUserSettings();
+
+  if (digest.isPending) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <LoadingState />
+      </SafeAreaView>
+    );
+  }
+
+  if (digest.isError) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <ErrorState error={digest.error} onRetry={() => void digest.refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  // addendum §E: with no Anthropic key the digest legitimately never finalises.
+  if (digest.data?.status !== 'ready') {
+    return (
+      <SafeAreaView style={styles.screen} edges={['top']}>
+        <EmptyState
+          iconSize={90}
+          iconRadius={21}
+          title="Digest hazırlanıyor"
+          line={`Günlük özet her gün ${settings.digestTime} civarında hazır olur.`}
+          paddingVertical={100}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const { digest: ready } = digest.data;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.date}>{DIGEST_DATE}</Text>
-          <Text style={styles.headline}>{DIGEST_HEADLINE}</Text>
+          <Text style={styles.date}>{digestDateLine(ready.date)}</Text>
+          <Text style={styles.headline}>Bugünün AI Gündemi</Text>
           <View style={styles.badgeRow}>
             <View style={styles.readyBadge}>
-              <Text style={styles.readyText}>Hazır · {digestTime}</Text>
+              <Text style={styles.readyText}>Hazır · {settings.digestTime}</Text>
             </View>
-            <Text style={styles.meta}>{DIGEST_META}</Text>
+            <Text style={styles.meta}>{ready.items.length} haber · ~3 dk</Text>
           </View>
         </View>
         <AppIcon size={56} radius={14} />
       </View>
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {DIGEST.map((d, i) => (
-          <View key={d.no} style={styles.card}>
-            <View style={[styles.no, i === 0 ? styles.noLead : styles.noRest]}>
-              <Text style={[styles.noText, i === 0 ? styles.noTextLead : styles.noTextRest]}>
-                {d.no}
+        {ready.items.map((item, index) => (
+          <Pressable
+            key={`${item.position}-${item.articleId}`}
+            onPress={() => openArticle(router, item.articleId)}
+            accessibilityRole="button"
+            style={styles.card}
+          >
+            <View style={[styles.no, index === 0 ? styles.noLead : styles.noRest]}>
+              <Text style={[styles.noText, index === 0 ? styles.noTextLead : styles.noTextRest]}>
+                {String(item.position).padStart(2, '0')}
               </Text>
             </View>
             <View style={styles.cardBody}>
-              <Text style={styles.title}>{d.title}</Text>
-              <Text style={styles.line}>{d.line}</Text>
-              <Text style={styles.source}>{d.meta}</Text>
+              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.line}>{item.blurb}</Text>
+              <Text style={styles.source}>
+                {item.sourceName} · {item.category}
+              </Text>
             </View>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.appBg },
+const createStyles = (palette: Palette) => ({
+  screen: { flex: 1, backgroundColor: palette.appBg },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
     gap: 12,
   },
   headerText: { flex: 1 },
   date: {
     fontFamily: mono,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     letterSpacing: 1.5,
-    color: colors.accentText,
+    color: palette.accentText,
   },
-  headline: { fontSize: 24, fontFamily: fonts.xb, color: colors.text, marginTop: 6 },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  headline: { fontSize: 24, fontFamily: fonts.xb, color: palette.text, marginTop: 6 },
+  badgeRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginTop: 8,
+  },
   readyBadge: {
-    backgroundColor: colors.paleChip,
+    backgroundColor: palette.paleChip,
     borderRadius: radius.pill,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
-  readyText: { color: colors.appBg, fontSize: 11, fontFamily: fonts.b },
-  meta: { fontSize: 12, fontFamily: fonts.r, color: colors.text55 },
-  list: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 24, gap: 10 },
+  readyText: { color: palette.appBg, fontSize: 11, fontFamily: fonts.b },
+  meta: { fontSize: 12, fontFamily: fonts.r, color: palette.text55 },
+  list: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: TAB_BAR_SPACE,
+    gap: 10,
+  },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: palette.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: palette.border,
     borderRadius: radius.card,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 12,
   },
   no: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  noLead: { backgroundColor: colors.paleChip },
-  noRest: { backgroundColor: colors.accentSoft },
-  noText: { fontFamily: mono, fontSize: 13, fontWeight: '800' },
-  noTextLead: { color: colors.appBg },
-  noTextRest: { color: colors.accentText },
+  noLead: { backgroundColor: palette.paleChip },
+  noRest: { backgroundColor: palette.accentSoft },
+  noText: { fontFamily: mono, fontSize: 13, fontWeight: '800' as const },
+  noTextLead: { color: palette.appBg },
+  noTextRest: { color: palette.accentText },
   cardBody: { flex: 1, minWidth: 0 },
-  title: { fontSize: 15, fontFamily: fonts.sb, color: colors.text, lineHeight: 21 },
+  title: { fontSize: 15, fontFamily: fonts.sb, color: palette.text, lineHeight: 21 },
   line: {
     fontSize: 13,
     fontFamily: fonts.r,
-    color: colors.text6,
+    color: palette.text6,
     lineHeight: 19.5,
     marginTop: 4,
   },
-  source: { fontSize: 11, fontFamily: fonts.r, color: colors.text45, marginTop: 6 },
+  source: { fontSize: 11, fontFamily: fonts.r, color: palette.text45, marginTop: 6 },
 });

@@ -8,21 +8,23 @@ import {
   SourcesIcon,
   SparkleIcon,
 } from '../../src/components/Icons';
-import { colors, fonts } from '../../src/theme/tokens';
+import { useTheme } from '../../src/theme/ThemeProvider';
+import { fonts } from '../../src/theme/typography';
 
 /** Five tabs, in the prototype's order; feed is the default route. */
 export default function TabsLayout() {
+  const { palette } = useTheme();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accentText,
-        tabBarInactiveTintColor: colors.tabInactive,
-        sceneStyle: { backgroundColor: colors.appBg },
+        tabBarActiveTintColor: palette.accentText,
+        tabBarInactiveTintColor: palette.tabInactive,
+        sceneStyle: { backgroundColor: palette.appBg },
         tabBarStyle: {
-          backgroundColor: colors.tabBarBg,
+          backgroundColor: palette.tabBarBg,
           borderTopWidth: 1,
-          borderTopColor: colors.tabBarBorder,
+          borderTopColor: palette.tabBarBorder,
           height: 88,
           paddingTop: 6,
         },

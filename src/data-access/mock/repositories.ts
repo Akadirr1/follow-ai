@@ -17,6 +17,7 @@ import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   REPOSITORY_CONTRACT_VERSION,
+  type AddSourceOptions,
   type DigestRepository,
   type EnrichmentRepository,
   type FeedRepository,
@@ -116,7 +117,7 @@ export function createMockSourceRepository(): SourceRepository {
      * honest answer; inventing a source row would make the mock claim a capability
      * the app does not have until P3.
      */
-    async addSourceByUrl(url: string): Promise<Result<Source>> {
+    async addSourceByUrl(url: string, _options?: AddSourceOptions): Promise<Result<Source>> {
       const raw = url?.trim();
       if (!raw) return err('invalid_input', 'A feed or site URL is required.');
 

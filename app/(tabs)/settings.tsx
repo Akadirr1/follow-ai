@@ -1,11 +1,12 @@
-import React from 'react';
+import Constants from 'expo-constants';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DigestTimeSheet } from '../../src/components/DigestTimeSheet';
+import { DigestTimeSheet, type DigestTime } from '../../src/components/DigestTimeSheet';
 import { ChevronRightIcon } from '../../src/components/Icons';
+import { TOASTS, useToast } from '../../src/components/ToastProvider';
 import { Toggle } from '../../src/components/Toggle';
-import { useDispatch, useStore } from '../../src/store/StoreProvider';
 import type { Palette } from '../../src/theme/palettes';
 import {
   useTheme,
@@ -13,21 +14,41 @@ import {
   useThemedStyles,
   type ThemePreference,
 } from '../../src/theme/ThemeProvider';
-import { fonts, mono, radius } from '../../src/theme/typography';
+import { fonts, mono, radius, TAB_BAR_SPACE } from '../../src/theme/typography';
+import { useUserSettings } from '../../src/user-state/hooks';
 
-/** Label order matches the prototype and the design board's light Settings screen. */
 const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'Koyu' },
   { value: 'light', label: 'Açık' },
   { value: 'system', label: 'Sistem' },
 ];
 
+/**
+ * The version line. The prototype hard-coded "1.0.0 · Expo SDK 54"; reading it
+ * from the manifest means it cannot drift from what actually shipped.
+ */
+export function versionLine(
+  version: string | null | undefined,
+  sdkVersion: string | null | undefined,
+): string {
+  const app = version ?? '1.0.0';
+  return sdkVersion ? `${app} · Expo SDK ${sdkVersion.split('.')[0]}` : app;
+}
+
 export default function SettingsScreen() {
-  const state = useStore();
-  const dispatch = useDispatch();
   const { palette } = useTheme();
-  const { preference, setPreference } = useThemePreference();
   const styles = useThemedStyles(createStyles);
+  const { preference, setPreference } = useThemePreference();
+  const { settings, update } = useUserSettings();
+  const { showToast } = useToast();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const saveDigestTime = (time: DigestTime) => {
+    // P9 owns the notification schedule; P7 only persists the preference.
+    update({ digestTime: time });
+    setSheetOpen(false);
+    showToast(TOASTS.digestTime);
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -45,8 +66,8 @@ export default function SettingsScreen() {
                 <Text style={styles.rowSub}>Yabancı içerik Türkçeye çevrilir</Text>
               </View>
               <Toggle
-                on={state.translate}
-                onToggle={() => dispatch({ type: 'toggleTranslate' })}
+                on={settings.autoTranslate}
+                onToggle={() => update({ autoTranslate: !settings.autoTranslate })}
                 accessibilityLabel="Otomatik çeviri"
               />
             </View>
@@ -63,13 +84,13 @@ export default function SettingsScreen() {
           <Text style={styles.sectionLabel}>GÜNLÜK DIGEST</Text>
           <View style={styles.group}>
             <Pressable
-              onPress={() => dispatch({ type: 'openSheet' })}
+              onPress={() => setSheetOpen(true)}
               accessibilityRole="button"
               style={styles.row}
             >
               <Text style={[styles.rowTitle, styles.grow]}>Digest saati</Text>
               <View style={styles.timeBadge}>
-                <Text style={styles.timeBadgeText}>{state.digestTime}</Text>
+                <Text style={styles.timeBadgeText}>{settings.digestTime}</Text>
               </View>
               <ChevronRightIcon color={palette.text4} />
             </Pressable>
@@ -79,8 +100,11 @@ export default function SettingsScreen() {
                 <Text style={styles.rowTitle}>Digest bildirimi</Text>
                 <Text style={styles.rowSub}>Hazır olunca haber ver</Text>
               </View>
-              {/* Fixed on in the prototype — no handler, so it stays decorative. */}
-              <Toggle on />
+              <Toggle
+                on={settings.digestEnabled}
+                onToggle={() => update({ digestEnabled: !settings.digestEnabled })}
+                accessibilityLabel="Digest bildirimi"
+              />
             </View>
           </View>
         </View>
@@ -89,11 +113,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionLabel}>GÖRÜNÜM</Text>
           <View style={[styles.group, styles.themeGroup]}>
             <Text style={[styles.rowTitle, styles.grow]}>Tema</Text>
-            <View
-              style={styles.segment}
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Tema"
-            >
+            <View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel="Tema">
               {THEME_OPTIONS.map(({ value, label }) => {
                 const active = preference === value;
                 return (
@@ -125,13 +145,23 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <View style={styles.row}>
               <Text style={[styles.rowTitle, styles.grow]}>Sürüm</Text>
-              <Text style={styles.version}>1.0.0 · Expo SDK 54</Text>
+              <Text style={styles.version}>
+                {versionLine(
+                  Constants.expoConfig?.version,
+                  Constants.expoConfig?.sdkVersion ?? Constants.expoVersion,
+                )}
+              </Text>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      <DigestTimeSheet />
+      <DigestTimeSheet
+        visible={sheetOpen}
+        value={settings.digestTime}
+        onClose={() => setSheetOpen(false)}
+        onSave={saveDigestTime}
+      />
     </SafeAreaView>
   );
 }
@@ -140,7 +170,12 @@ const createStyles = (palette: Palette) => ({
   screen: { flex: 1, backgroundColor: palette.appBg },
   header: { paddingHorizontal: 20, paddingTop: 14 },
   title: { fontSize: 21, fontFamily: fonts.xb, color: palette.text },
-  list: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24, gap: 18 },
+  list: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: TAB_BAR_SPACE,
+    gap: 18,
+  },
   sectionLabel: {
     fontFamily: mono,
     fontSize: 11,
@@ -192,7 +227,7 @@ const createStyles = (palette: Palette) => ({
     backgroundColor: palette.inputBg,
     borderWidth: 1,
     borderColor: palette.borderSeg,
-    borderRadius: 12,
+    borderRadius: radius.seg,
     padding: 3,
   },
   segItem: { paddingVertical: 7, paddingHorizontal: 13, borderRadius: 9 },

@@ -1,40 +1,54 @@
 import { useRouter } from 'expo-router';
-import React, { useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ArticleCard } from '../../src/components/ArticleCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { TrashIcon } from '../../src/components/Icons';
-import { selectSaved, selectUnreadSavedCount } from '../../src/store/selectors';
-import { useDispatch, useStore } from '../../src/store/StoreProvider';
-import { colors, fonts, radius } from '../../src/theme/tokens';
+import { ErrorState, LoadingState } from '../../src/components/StateViews';
+import { TOASTS, useToast } from '../../src/components/ToastProvider';
+import { useFeed } from '../../src/data-access/hooks';
+import type { Article } from '../../src/domain/types';
+import { openArticle } from '../../src/navigation/openArticle';
+import type { Palette } from '../../src/theme/palettes';
+import { useTheme, useThemedStyles } from '../../src/theme/ThemeProvider';
+import { fonts, radius, TAB_BAR_SPACE } from '../../src/theme/typography';
+import { useReadArticles, useSavedArticles } from '../../src/user-state/hooks';
+
+/**
+ * Saved articles are device-local ids (addendum §A); their content comes from the
+ * feed cache. Ordering follows the save order, newest first, which is what the
+ * user just did — not the publish order.
+ */
+export function orderBySaved(articles: Article[], savedIds: string[]): Article[] {
+  const byId = new Map(articles.map((a) => [a.id, a]));
+  return savedIds.map((id) => byId.get(id)).filter((a): a is Article => a !== undefined);
+}
 
 export default function SavedScreen() {
-  const state = useStore();
-  const dispatch = useDispatch();
   const router = useRouter();
-  const items = selectSaved(state);
-  const unread = selectUnreadSavedCount(state);
+  const { palette } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const { showToast } = useToast();
+  const { saved, setArticleSaved } = useSavedArticles();
+  const { isRead, markRead } = useReadArticles();
 
-  // Prototype `_suppressOpen`: on web the trash press can bubble to the card, which
-  // would delete and navigate at once. The 50 ms window swallows that second press.
-  const suppressOpen = useRef(false);
+  // The saved list needs the article bodies, and the feed query already holds
+  // them; asking the repository per id would be N round trips for one screen.
+  const feed = useFeed();
+  const articles = useMemo(
+    () => feed.data?.pages.flatMap((page) => page.items) ?? [],
+    [feed.data],
+  );
 
-  const open = (id: string) => {
-    if (suppressOpen.current) {
-      console.warn(`[saved] open("${id}") suppressed: a delete press is in flight`);
-      return;
-    }
-    dispatch({ type: 'openArticle', id, markRead: true });
-    router.push(`/article/${id}`);
-  };
+  const savedIds = saved.map((entry) => entry.articleId);
+  const items = orderBySaved(articles, savedIds);
+  const unread = items.filter((a) => !isRead(a.id)).length;
 
   const remove = (id: string) => {
-    suppressOpen.current = true;
-    setTimeout(() => {
-      suppressOpen.current = false;
-    }, 50);
-    dispatch({ type: 'deleteSaved', id });
+    setArticleSaved(id, false);
+    showToast(TOASTS.deleted);
   };
 
   return (
@@ -46,114 +60,90 @@ export default function SavedScreen() {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {items.map((a) => {
-          const isRead = !!state.read[a.id];
-          return (
-            <Pressable
-              key={a.id}
-              onPress={() => open(a.id)}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.card,
-                { opacity: isRead ? 0.62 : 1 },
-                pressed && { borderColor: 'rgba(96,165,250,.55)' },
-              ]}
-            >
-              <View style={styles.row}>
-                <View
-                  style={[
-                    styles.dot,
-                    { backgroundColor: isRead ? 'transparent' : colors.accentText },
-                  ]}
-                />
-                <View style={styles.mid}>
-                  <Text style={styles.src}>{a.src}</Text>
-                  <Text style={styles.sub}>
-                    {a.time} · {a.cat}
-                  </Text>
-                </View>
+      {feed.isPending && savedIds.length > 0 ? (
+        <LoadingState />
+      ) : feed.isError && articles.length === 0 && savedIds.length > 0 ? (
+        <ErrorState error={feed.error} onRetry={() => void feed.refetch()} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          {items.map((article) => (
+            <ArticleCard
+              key={article.id}
+              article={article}
+              onPress={() => openArticle(router, article.id, { onOpen: () => markRead(article.id) })}
+              showTranslationTag={false}
+              dimmed={isRead(article.id)}
+              trailing={
                 <Pressable
-                  onPress={() => remove(a.id)}
+                  onPress={() => remove(article.id)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${a.src} kaydını sil`}
-                  style={({ pressed }) => [
-                    styles.trash,
-                    pressed && { backgroundColor: 'rgba(229,72,77,.15)' },
-                  ]}
+                  accessibilityLabel={`${article.sourceName} kaydını sil`}
+                  // Nested Pressable: RN does not bubble to the card, and on web
+                  // the card's own press is what a stray bubble would trigger, so
+                  // the delete stays a delete (impl-001's suppress-open lesson).
+                  style={({ pressed }) => [styles.trash, pressed && styles.trashPressed]}
                 >
-                  <TrashIcon />
+                  <TrashIcon color={palette.text45} />
                 </Pressable>
-              </View>
-              <Text style={styles.cardTitle}>{a.title}</Text>
-            </Pressable>
-          );
-        })}
+              }
+            />
+          ))}
 
-        {items.length === 0 ? (
-          <EmptyState
-            iconSize={96}
-            iconRadius={22}
-            title="Kaydedilen haber yok"
-            line="Detaydaki bookmark simgesine dokunarak kaydet."
-            lineHeight={21}
-            paddingVertical={80}
-          >
-            <Pressable
-              onPress={() => router.replace('/')}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.backButton,
-                pressed && { backgroundColor: 'rgba(37,99,235,.15)' },
-              ]}
+          {items.length === 0 ? (
+            <EmptyState
+              iconSize={96}
+              iconRadius={22}
+              title="Kaydedilen haber yok"
+              line="Detaydaki bookmark simgesine dokunarak kaydet."
+              lineHeight={21}
+              paddingVertical={80}
             >
-              <Text style={styles.backText}>Feed&apos;e dön</Text>
-            </Pressable>
-          </EmptyState>
-        ) : null}
-      </ScrollView>
+              <Pressable
+                onPress={() => router.replace('/')}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.backButton, pressed && styles.backPressed]}
+              >
+                <Text style={styles.backText}>Feed&apos;e dön</Text>
+              </Pressable>
+            </EmptyState>
+          ) : null}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.appBg },
+const createStyles = (palette: Palette) => ({
+  screen: { flex: 1, backgroundColor: palette.appBg },
   header: { paddingHorizontal: 20, paddingTop: 14 },
-  title: { fontSize: 21, fontFamily: fonts.xb, color: colors.text },
-  meta: { fontSize: 12, fontFamily: fonts.r, color: colors.text55, marginTop: 2 },
-  unread: { color: colors.accentText, fontFamily: fonts.sb },
-  list: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24, gap: 12 },
-  card: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    paddingVertical: 14,
+  title: { fontSize: 21, fontFamily: fonts.xb, color: palette.text },
+  meta: { fontSize: 12, fontFamily: fonts.r, color: palette.text55, marginTop: 2 },
+  unread: { color: palette.accentText, fontFamily: fonts.sb },
+  list: {
     paddingHorizontal: 16,
-    gap: 10,
+    paddingTop: 16,
+    paddingBottom: TAB_BAR_SPACE,
+    gap: 12,
+    flexGrow: 1,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  mid: { flex: 1, minWidth: 0 },
-  src: { fontSize: 13, fontFamily: fonts.sb, color: colors.text },
-  sub: { fontSize: 12, fontFamily: fonts.r, color: colors.text55 },
   trash: {
     width: 40,
     height: 40,
     borderRadius: radius.tile,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
-  cardTitle: { fontSize: 16, fontFamily: fonts.sb, color: colors.text, lineHeight: 22 },
+  trashPressed: { backgroundColor: palette.accentSoft },
   backButton: {
     height: 46,
     paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: colors.borderDashed,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: palette.borderDashed,
+    borderRadius: radius.seg,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginTop: 10,
   },
-  backText: { fontSize: 14, fontFamily: fonts.sb, color: colors.accentText },
+  backPressed: { backgroundColor: palette.accentSoft },
+  backText: { fontSize: 14, fontFamily: fonts.sb, color: palette.accentText },
 });

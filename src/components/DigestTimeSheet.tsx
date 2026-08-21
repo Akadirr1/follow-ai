@@ -1,64 +1,66 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 
-import { useDispatch, useStore } from '../store/StoreProvider';
-import { DIGEST_TIMES } from '../store/types';
 import type { Palette } from '../theme/palettes';
 import { useTheme, useThemedStyles } from '../theme/ThemeProvider';
 import { fonts, mono, radius } from '../theme/typography';
 
+/** The five slots the prototype offers. */
+export const DIGEST_TIMES = ['07:00', '07:30', '08:00', '08:30', '09:00'] as const;
+export type DigestTime = (typeof DIGEST_TIMES)[number];
+
+export const isDigestTime = (value: string): value is DigestTime =>
+  (DIGEST_TIMES as readonly string[]).includes(value);
+
 /**
- * Bottom sheet for the digest hour. The pick is staged in `tmpTime`: Vazgeç closes
- * without committing, Kaydet commits and toasts.
+ * Bottom sheet for the digest hour.
+ *
+ * The draft lives here now rather than in a global store (arch-001 §4: "the
+ * sheet owns open + draft, the settings mutation commits a validated slot"), so
+ * Vazgeç simply unmounts the draft and Kaydet hands one value up.
  */
-export function DigestTimeSheet() {
-  const { sheet, tmpTime } = useStore();
-  const dispatch = useDispatch();
+export function DigestTimeSheet({
+  visible,
+  value,
+  onClose,
+  onSave,
+}: {
+  visible: boolean;
+  value: string;
+  onClose: () => void;
+  onSave: (time: DigestTime) => void;
+}) {
   const { palette } = useTheme();
   const styles = useThemedStyles(createStyles);
+  const [draft, setDraft] = useState<DigestTime>(isDigestTime(value) ? value : '08:00');
+
+  // Reopening reseeds the draft from the committed value; a stale draft would
+  // silently offer to save a slot the user already cancelled.
+  useEffect(() => {
+    if (visible) setDraft(isDigestTime(value) ? value : '08:00');
+  }, [visible, value]);
 
   return (
-    <Modal
-      visible={sheet}
-      transparent
-      animationType="slide"
-      onRequestClose={() => dispatch({ type: 'closeSheet' })}
-    >
-      <Pressable
-        style={styles.scrim}
-        onPress={() => dispatch({ type: 'closeSheet' })}
-        accessibilityLabel="Kapat"
-      />
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Kapat" />
       <View style={styles.sheet}>
         <View style={styles.grabber} />
         <Text style={styles.title}>Digest saati</Text>
         <Text style={styles.sub}>Günlük özet her gün bu saatte hazırlanır.</Text>
 
         <View style={styles.times}>
-          {DIGEST_TIMES.map((t) => {
-            const picked = tmpTime === t;
+          {DIGEST_TIMES.map((time) => {
+            const picked = draft === time;
             return (
               <Pressable
-                key={t}
-                onPress={() => dispatch({ type: 'pickTime', time: t })}
-                accessibilityRole="button"
+                key={time}
+                onPress={() => setDraft(time)}
+                accessibilityRole="radio"
                 accessibilityState={{ selected: picked }}
-                style={[
-                  styles.time,
-                  { backgroundColor: picked ? palette.accentSheetPick : 'transparent' },
-                ]}
+                style={[styles.time, picked && styles.timePicked]}
               >
-                <Text
-                  style={[
-                    styles.timeText,
-                    {
-                      color: picked ? palette.text : palette.text45,
-                      fontSize: picked ? 22 : 17,
-                      fontWeight: picked ? '800' : '600',
-                    },
-                  ]}
-                >
-                  {t}
+                <Text style={[styles.timeText, picked ? styles.timeOn : styles.timeOff]}>
+                  {time}
                 </Text>
               </Pressable>
             );
@@ -66,18 +68,11 @@ export function DigestTimeSheet() {
         </View>
 
         <View style={styles.actions}>
-          <Pressable
-            onPress={() => dispatch({ type: 'closeSheet' })}
-            accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.cancel,
-              pressed && { backgroundColor: palette.accentSheetPick },
-            ]}
-          >
+          <Pressable onPress={onClose} accessibilityRole="button" style={styles.cancel}>
             <Text style={styles.cancelText}>Vazgeç</Text>
           </Pressable>
           <Pressable
-            onPress={() => dispatch({ type: 'saveTime' })}
+            onPress={() => onSave(draft)}
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.save,
@@ -117,18 +112,21 @@ const createStyles = (palette: Palette) => ({
   times: { gap: 4 },
   time: {
     height: 46,
-    borderRadius: 12,
+    borderRadius: radius.seg,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
+  timePicked: { backgroundColor: palette.accentSheetPick },
   timeText: { fontFamily: mono },
+  timeOn: { color: palette.text, fontSize: 22, fontWeight: '800' as const },
+  timeOff: { color: palette.text45, fontSize: 17, fontWeight: '600' as const },
   actions: { flexDirection: 'row' as const, gap: 10, marginTop: 16 },
   cancel: {
     flex: 1,
     height: 50,
     borderWidth: 1,
     borderColor: palette.borderChip,
-    borderRadius: 12,
+    borderRadius: radius.seg,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
@@ -136,7 +134,7 @@ const createStyles = (palette: Palette) => ({
   save: {
     flex: 1,
     height: 50,
-    borderRadius: 12,
+    borderRadius: radius.seg,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

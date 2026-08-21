@@ -17,6 +17,7 @@ import {
   type DigestRepository,
   type EnrichmentRepository,
   type FeedRepository,
+  type AddSourceOptions,
   type ListArticlesParams,
   type SearchArticlesParams,
   type SourceRepository,
@@ -178,7 +179,7 @@ export function createSupabaseSourceRepository(
     },
 
     /** Creates the *shared* source row; the device's subscription is local (addendum §A). */
-    async addSourceByUrl(url: string): Promise<Result<Source>> {
+    async addSourceByUrl(url: string, options?: AddSourceOptions): Promise<Result<Source>> {
       const raw = url?.trim();
       if (!raw) return err('invalid_input', 'A feed or site URL is required.');
 
@@ -199,7 +200,14 @@ export function createSupabaseSourceRepository(
 
       const result = await callEdgeFunction<{ source?: SourceRow }>(
         'add-source',
-        { url: parsed.toString(), client_request_id: clientRequestId() },
+        {
+          url: parsed.toString(),
+          // The sheet's category/language are hints for the server's own
+          // classification, not authority: add-source re-derives both.
+          ...(options?.category ? { category: options.category } : {}),
+          language: options?.language ?? 'en',
+          client_request_id: clientRequestId(),
+        },
         edgeOptions,
       );
       if (!result.ok) return result;

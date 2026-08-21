@@ -1,12 +1,12 @@
-/**
- * The search seam must keep the store's behaviour, including the case-folding fix
- * from impl-002 (rev-001 B1): plain `toLowerCase()`, so `openai` still finds the
- * OpenAI article. `selectResults` is imported read-only as the oracle — when P7
- * deletes it, these expectations move here unchanged.
- */
-import { initialState } from '../../store/reducer';
-import { selectResults } from '../../store/selectors';
 import { createMockRepositories } from '../mock';
+
+/**
+ * Search behaviour, previously asserted against the store's `selectResults` as an
+ * oracle. P7 deleted the store, so the expectations that lived there are stated
+ * directly here — same queries, same expected ids, including the impl-002 B1
+ * regression (`openai` must find the OpenAI article; Turkish-locale folding used
+ * to turn "OpenAI Blog" into "openaı blog").
+ */
 
 const repos = createMockRepositories();
 
@@ -16,30 +16,21 @@ const searchIds = async (query: string): Promise<string[]> => {
   return result.data.items.map((a) => a.id);
 };
 
-const storeIds = (query: string): string[] =>
-  selectResults({ ...initialState, q: query }).map((a) => a.id);
-
-const QUERIES = [
-  'openai',
-  'ai',
-  'ALPHAFOLD',
-  'alphafold',
-  'hugging face',
-  'türkiye',
-  'gpt-5.2',
-  'Claude',
-  'açık kaynak',
-  'zzzz',
-  '',
-  '   ',
-];
-
-describe('search parity with the store selector', () => {
-  it.each(QUERIES)('matches selectResults for %p', async (query) => {
-    expect(await searchIds(query)).toEqual(storeIds(query));
+describe('mock search', () => {
+  it.each([
+    ['openai', ['oa']],
+    ['ALPHAFOLD', ['gd']],
+    ['alphafold', ['gd']],
+    ['hugging face', ['hf']],
+    ['türkiye', ['wz']],
+    ['zzzz', []],
+    ['', []],
+    ['   ', []],
+  ])('%p returns %p', async (query, expected) => {
+    expect(await searchIds(query as string)).toEqual(expected);
   });
 
-  it('finds the OpenAI article by acronym — the rev-001 B1 regression', async () => {
+  it('finds the OpenAI article by acronym — the impl-002 B1 regression', async () => {
     expect(await searchIds('openai')).toEqual(['oa']);
     expect(await searchIds('ai')).toContain('oa');
   });
@@ -48,6 +39,11 @@ describe('search parity with the store selector', () => {
     expect(await searchIds('alphafold')).toEqual(['gd']); // title
     expect(await searchIds('hugging face')).toEqual(['hf']); // source name
     expect(await searchIds('türkiye')).toEqual(['wz']); // category
+  });
+
+  it('is case-insensitive both ways round', async () => {
+    expect(await searchIds('HUGGING FACE')).toEqual(await searchIds('hugging face'));
+    expect(await searchIds('Türkiye')).toEqual(await searchIds('türkiye'));
   });
 
   it('returns an empty page for a blank query without erroring', async () => {
