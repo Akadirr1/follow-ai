@@ -40,6 +40,21 @@ const retryPolicy = (failureCount: number, thrown: unknown): boolean => {
   return failureCount < 2;
 };
 
+/**
+ * No React Query retries on the PostgREST read path (P10 N2).
+ *
+ * postgrest-js already retries a GET itself — 503/520 and transport failures,
+ * three attempts, 1 s/2 s/4 s — so by the time a `Result` comes back the request
+ * has been tried four times over ~7 s. Layering this hook's two retries on top
+ * (plus React Query's own 1 s/2 s backoff) pushed the worst case to ~24 s of
+ * spinner before the offline banner appeared. With retries left to the one layer
+ * that already does them, the worst case is a single ~7 s cycle.
+ *
+ * Measured with the fake PostgREST in `src/__tests__/integration.test.tsx`:
+ * a failing refetch used to cost 4 repository calls, now 1.
+ */
+const READ_RETRY = 0;
+
 export const useRepositories = (): Repositories => useMemo(() => getRepositories(), []);
 
 export function useFeed(filter: FeedFilter = {}) {
@@ -56,7 +71,7 @@ export function useFeed(filter: FeedFilter = {}) {
         })
         .then(unwrap),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    retry: retryPolicy,
+    retry: READ_RETRY,
   });
 }
 
@@ -78,7 +93,7 @@ export function useSearch(query: string) {
     // A blank query is the "recent searches" state, not a request.
     enabled: trimmed.length > 0,
     queryFn: () => repos.feed.searchArticles({ query: trimmed }).then(unwrap),
-    retry: retryPolicy,
+    retry: READ_RETRY,
   });
 }
 
@@ -127,8 +142,20 @@ export function useEnrichment(
     enabled: Boolean(articleId) && options.enabled !== false,
     queryFn: () => repos.enrichment.requestEnrichment(articleId as string).then(unwrap),
     retry: retryPolicy,
+    /**
+     * `ready` and `unavailable` are both terminal, so once one arrives the answer
+     * is never stale: a remount or a screen focus must not re-ask. Only `queued`
+     * stays fresh for zero milliseconds, because the poll below is what advances
+     * it.
+     */
+    staleTime: (query) => {
+      const data = query.state.data as EnrichmentResult | undefined;
+      return data && data.status !== 'queued' ? Infinity : 0;
+    },
     refetchInterval: (query) => {
       const data = query.state.data as EnrichmentResult | undefined;
+      // Anything that is not `queued` — including `unavailable`, where the server
+      // has already looked and found no body — stops the poll dead.
       if (!data || data.status !== 'queued') return false;
       if (query.state.dataUpdateCount >= maxPolls) {
         console.warn(

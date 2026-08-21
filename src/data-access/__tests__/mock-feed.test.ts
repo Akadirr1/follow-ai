@@ -2,10 +2,17 @@ import { ARTICLES } from '../../data/articles';
 import type { Result } from '../../domain/errors';
 import type { Article, Cursor, Page } from '../../domain/types';
 import { createMockRepositories } from '../mock';
-import { MOCK_NOW_ISO, hoursAgoFromLabel } from '../mock/mapper';
+import { MOCK_NOW_ISO, NO_CONTENT_ARTICLE, hoursAgoFromLabel } from '../mock/mapper';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../repositories';
 
 const repos = createMockRepositories();
+
+/**
+ * The prototype fixtures plus `NO_CONTENT_ARTICLE`, the body-less article the
+ * mock adapter adds so mock mode can reach `unavailable/no_content` (fix-005).
+ * It sorts last: oldest timestamp.
+ */
+const ALL_IDS = ['oa', 'an', 'gd', 'hf', 'wz', NO_CONTENT_ARTICLE.id];
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(`expected ok, got ${result.error.message}`);
@@ -15,7 +22,7 @@ function unwrap<T>(result: Result<T>): T {
 describe('mock feed — mapping', () => {
   it('maps every fixture article onto a DTO with no fixture-shaped fields left', async () => {
     const page = unwrap(await repos.feed.listArticles());
-    expect(page.items).toHaveLength(ARTICLES.length);
+    expect(page.items).toHaveLength(ARTICLES.length + 1);
     for (const article of page.items) {
       expect(article).toEqual(
         expect.objectContaining({
@@ -35,11 +42,22 @@ describe('mock feed — mapping', () => {
     }
   });
 
-  it('gives every article exactly three summary bullets', async () => {
+  it('gives every article with a summary exactly three bullets', async () => {
     const page = unwrap(await repos.feed.listArticles());
-    for (const article of page.items) {
+    const withSummary = page.items.filter((a) => a.summary !== undefined);
+    expect(withSummary).toHaveLength(ARTICLES.length);
+    for (const article of withSummary) {
       expect(article.summary?.bullets).toHaveLength(3);
     }
+  });
+
+  it('carries one body-less article, which is what mock mode has no other way to reach', async () => {
+    const page = unwrap(await repos.feed.listArticles());
+    const bodyless = page.items.filter((a) => a.bodyOriginal.trim() === '');
+    expect(bodyless.map((a) => a.id)).toEqual([NO_CONTENT_ARTICLE.id]);
+    expect(bodyless[0].summary).toBeUndefined();
+    // It belongs to a real source, so source filtering and the card chrome work.
+    expect(bodyless[0].sourceId).toBe('hf');
   });
 
   it('translates English articles and marks the Turkish one not_required', async () => {
@@ -82,7 +100,7 @@ describe('mock feed — mapping', () => {
 describe('mock feed — ordering and pagination', () => {
   it('orders newest first', async () => {
     const page = unwrap(await repos.feed.listArticles());
-    expect(page.items.map((a) => a.id)).toEqual(['oa', 'an', 'gd', 'hf', 'wz']);
+    expect(page.items.map((a) => a.id)).toEqual(ALL_IDS);
     const times = page.items.map((a) => Date.parse(a.publishedAt));
     expect([...times].sort((a, b) => b - a)).toEqual(times);
   });
@@ -107,9 +125,9 @@ describe('mock feed — ordering and pagination', () => {
       expect(pages).toBeLessThan(10); // guards an infinite cursor loop
     } while (cursor);
 
-    expect(seen).toEqual(['oa', 'an', 'gd', 'hf', 'wz']);
+    expect(seen).toEqual(ALL_IDS);
     expect(new Set(seen).size).toBe(seen.length);
-    expect(pages).toBe(3); // 2 + 2 + 1
+    expect(pages).toBe(3); // 2 + 2 + 2
   });
 
   it('reports the end of the list with a null cursor', async () => {
@@ -140,7 +158,7 @@ describe('mock feed — filtering', () => {
 
   it('filters by source ids', async () => {
     const page = unwrap(await repos.feed.listArticles({ sourceIds: ['hf', 'wz'] }));
-    expect(page.items.map((a) => a.id)).toEqual(['hf', 'wz']);
+    expect(page.items.map((a) => a.id)).toEqual(['hf', 'wz', NO_CONTENT_ARTICLE.id]);
   });
 
   it('combines both filters and can return an empty page', async () => {

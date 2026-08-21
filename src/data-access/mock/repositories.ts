@@ -28,6 +28,7 @@ import {
 import {
   compareArticles,
   cursorOfArticle,
+  hasNoContent,
   isAfterCursor,
   mockArticles,
   mockDigest,
@@ -178,9 +179,16 @@ export function createMockEnrichmentRepository(): EnrichmentRepository {
       const article = mockArticles().find((a) => a.id === trimmed);
       if (!article) return err('not_found', `No article with id "${trimmed}".`);
 
-      // The fixtures ship Claude's output already, so the mock is always `ready`.
-      // The `queued` branch still exists on the contract because the real backend
-      // returns it whenever the Anthropic key is unset (addendum §E).
+      // Nothing to summarise: the same terminal answer the deployed function
+      // gives for an excerpt-only row (`NO_CONTENT_ARTICLE` in ./mapper).
+      if (hasNoContent(article)) {
+        return ok({ status: 'unavailable', reason: 'no_content' });
+      }
+
+      // The fixtures ship Claude's output already, so the mock is otherwise
+      // always `ready`. The `queued` branch still exists on the contract because
+      // the real backend returns it whenever the Anthropic key is unset
+      // (addendum §E).
       if (!article.summary) {
         console.warn(`[mock] article "${trimmed}" has no fixture summary; reporting queued.`);
         return ok({ status: 'queued', reason: 'no_fixture_summary' });

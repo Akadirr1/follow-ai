@@ -1,6 +1,6 @@
 import { env } from '../../config/env';
 import { err, ok, type DataErrorCode, type Result } from '../../domain/errors';
-import { getDeviceId } from '../../identity/deviceId';
+import { getDeviceId, randomUuidV4 } from '../../identity/deviceId';
 
 /**
  * Edge Function calls. Everything privileged or costly — adding a source, asking
@@ -23,18 +23,37 @@ export type EdgeErrorEnvelope = {
   };
 };
 
-/** Server error codes we can map to something better than `server`. */
+/**
+ * Server error codes we can map to something better than `server`.
+ *
+ * The first block is `_shared/error.ts`'s `ErrorCode` union — what the deployed
+ * functions actually emit. P10 N1 found the map keyed only on names no handler
+ * ever sends (`invalid_url`, `not_a_feed`, …), so a "this is not a feed" answer
+ * reached the user as "start the address with https://". The legacy names are
+ * kept below because they cost nothing and a future handler may use them; the
+ * ones that matter are the first block.
+ *
+ * `duplicate_source` is deliberately absent: an already-known feed is a **200**
+ * with `created:false`, not an error. The mock repository still raises that code
+ * locally, which is why the copy for it survives in AddSourceSheet.
+ */
 const CODE_MAP: Record<string, DataErrorCode> = {
+  // Emitted by the deployed functions (supabase/functions/_shared/error.ts).
+  bad_request: 'invalid_input',
+  unsafe_url: 'invalid_input',
+  parse_failed: 'unsupported_source',
+  not_found: 'not_found',
+  rate_limited: 'rate_limited',
+  payload_too_large: 'invalid_input',
+  // Names a handler could plausibly grow, mapped ahead of time.
   invalid_url: 'invalid_input',
   invalid_input: 'invalid_input',
   invalid_request: 'invalid_input',
   unsupported_source: 'unsupported_source',
   not_a_feed: 'unsupported_source',
+  no_feed_discovered: 'unsupported_source',
+  empty_feed: 'unsupported_source',
   blocked_host: 'unsupported_source',
-  duplicate_source: 'duplicate_source',
-  duplicate: 'duplicate_source',
-  not_found: 'not_found',
-  rate_limited: 'rate_limited',
   too_many_requests: 'rate_limited',
 };
 
@@ -149,6 +168,12 @@ export async function callEdgeFunction<T>(
   );
 }
 
-/** Idempotency key for a retryable Edge write (arch-001 §6: explicit mutation ids). */
-export const clientRequestId = (): string =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+/**
+ * Idempotency key for a retryable Edge write (arch-001 §6: explicit mutation ids).
+ *
+ * It must be a **uuid v4**: every handler runs `isUuidV4` on it and answers 400
+ * `bad_request` otherwise. A shorter "unique enough" id shipped here once and
+ * failed every Edge write in supabase mode while every curl smoke passed, because
+ * those used real uuids (P10 B1).
+ */
+export const clientRequestId = (): string => randomUuidV4();

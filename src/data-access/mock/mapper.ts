@@ -159,7 +159,39 @@ export const compareArticles = (a: Article, b: Article): number =>
       ? 1
       : -1;
 
-export const mockArticles = (): Article[] => ARTICLES.map(toArticleDto).sort(compareArticles);
+/**
+ * One article with no body, because production has 100 of them.
+ *
+ * Hugging Face publishes excerpt-only items (measured 2026-08-21:
+ * `content_quality='excerpt'` with `content_text` and `excerpt` both NULL), and
+ * `request-enrichment` v2 answers `unavailable/no_content` for exactly those.
+ * Every prototype fixture is a full article, so mock mode had no way to reach
+ * that terminal state and the client polled it like a queued job.
+ *
+ * It lives here rather than in `src/data/articles.ts` because that file is the
+ * frozen prototype export; this is a seam-level fixture, and the mapper is where
+ * the seam's view of the fixtures is assembled. Dated oldest so it sorts last
+ * and cannot displace a prototype card or enter the five-item digest.
+ */
+export const NO_CONTENT_ARTICLE: Article = {
+  id: 'hf-excerpt',
+  sourceId: 'hf',
+  sourceName: 'Hugging Face',
+  tile: 'HF',
+  title: 'Hugging Face haftalık model derlemesi',
+  url: SITE_URLS.hf ?? '',
+  publishedAt: new Date(MOCK_NOW_MS - 30 * 60 * 60 * 1000).toISOString(),
+  category: 'Açık Kaynak',
+  language: 'en',
+  bodyOriginal: '',
+};
+
+/** True for an article the backend cannot summarise: nothing to send Claude. */
+export const hasNoContent = (article: Article): boolean =>
+  article.summary === undefined && article.bodyOriginal.trim() === '';
+
+export const mockArticles = (): Article[] =>
+  [...ARTICLES.map(toArticleDto), NO_CONTENT_ARTICLE].sort(compareArticles);
 
 /**
  * Cursors are minted and compared by `src/data-access/cursor.ts` — the branded

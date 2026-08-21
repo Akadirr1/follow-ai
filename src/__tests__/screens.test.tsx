@@ -100,6 +100,31 @@ describe('Feed', () => {
     expect(await screen.findByText('GPT-5.2 tanıtıldı')).toBeTruthy();
   });
 
+  it('drops the unseen count once an article has been opened', async () => {
+    setRepos({
+      listArticles: async () =>
+        ok(
+          page([
+            makeArticle({ id: 'oa', title: 'Birinci haber' }),
+            makeArticle({ id: 'an', title: 'İkinci haber' }),
+          ]),
+        ),
+    });
+    renderScreen(<FeedScreen />);
+    expect(await screen.findByText('Birinci haber')).toBeTruthy();
+    expect(screen.getByText('2 yeni')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Birinci haber'));
+    });
+
+    // `openArticle` routes *and* marks read; the header is the visible proof that
+    // the read set was persisted and re-read, not just that a route fired.
+    expect(mockPushes).toContain('/article/oa');
+    await waitFor(() => expect(screen.getByText('1 yeni')).toBeTruthy());
+    expect(screen.queryByText('2 yeni')).toBeNull();
+  });
+
   it('shows the prototype empty state when the filter matches nothing', async () => {
     setRepos({ listArticles: async () => ok(page([])) });
     renderScreen(<FeedScreen />);
@@ -228,6 +253,41 @@ describe('Article', () => {
     expect(await screen.findByText('Özet hazırlanıyor')).toBeTruthy();
     // addendum §E: the article itself stays readable.
     expect(screen.getByText('OpenAI announced GPT-5.2…')).toBeTruthy();
+  });
+
+  it('says the summary cannot be produced when the server answers unavailable', async () => {
+    // fix-005: an excerpt-only article. The server has already looked; waiting
+    // changes nothing, so the card must not spin.
+    setRepos({
+      getArticle: async () =>
+        ok(makeArticle({ id: 'a1', bodyOriginal: '', summary: undefined })),
+      requestEnrichment: async () => ok({ status: 'unavailable', reason: 'no_content' }),
+    });
+    renderScreen(<ArticleScreen />);
+
+    expect(
+      await screen.findByText('Bu haber için özet üretilemiyor; kaynağa git.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Özet hazırlanıyor')).toBeNull();
+    // No bullet count and no Claude credit: there is nothing to count or credit.
+    expect(screen.queryByText('3 madde')).toBeNull();
+    expect(screen.queryByText('Claude ile çevrildi ve özetlendi')).toBeNull();
+
+    // The action the copy points at still works.
+    await act(async () => {
+      fireEvent.press(screen.getByText('Kaynağa git '));
+    });
+    expect(mockOpenUrl).toHaveBeenCalledWith('https://openai.com/news/gpt-5-2');
+  });
+
+  it('prefers a summary the feed row already carried over a later unavailable', async () => {
+    setRepos({
+      getArticle: async () => ok(makeArticle({ id: 'a1' })),
+      requestEnrichment: async () => ok({ status: 'unavailable', reason: 'no_content' }),
+    });
+    renderScreen(<ArticleScreen />);
+    expect(await screen.findByText('bir')).toBeTruthy();
+    expect(screen.queryByText('Bu haber için özet üretilemiyor; kaynağa git.')).toBeNull();
   });
 
   it('hides the Orijinal/Çeviri segment for a Turkish source', async () => {

@@ -315,6 +315,13 @@ export function createSupabaseEnrichmentRepository(
       if (!result.ok) return result;
 
       const { status, data } = result.data;
+      // Terminal, and checked before `queued`: v2 answers 200 `unavailable` for an
+      // article with no body to send Claude. It used to fall through to the
+      // unknown-body branch below and be polled to the cap as if it were pending.
+      if (data?.status === 'unavailable') {
+        return ok({ status: 'unavailable', reason: data.reason ?? 'no_content' });
+      }
+
       // 202, or any body that says `queued`, is the normal no-API-key path
       // (addendum §E): the job is real, it just has nothing to run yet.
       if (status === 202 || data?.status === 'queued') {

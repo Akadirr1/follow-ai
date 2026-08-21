@@ -128,7 +128,15 @@ export type Page<T> = {
   hasMore: boolean;
 };
 
-/** Enrichment outcome. `queued` is normal while no API key exists (addendum §E). */
+/**
+ * Enrichment outcome. `queued` is normal while no API key exists (addendum §E).
+ *
+ * `unavailable` is **terminal**: the server has looked and there is nothing to
+ * summarise — an excerpt-only feed item with no body (`reason: 'no_content'`).
+ * Polling it is wasted work and, worse, shows "Özet hazırlanıyor" forever, so it
+ * is a separate variant rather than a flavour of `queued`.
+ */
 export type EnrichmentResult =
   | { status: 'ready'; summary: ArticleSummary }
-  | { status: 'queued'; reason: string | null };
+  | { status: 'queued'; reason: string | null }
+  | { status: 'unavailable'; reason: 'no_content' | string };

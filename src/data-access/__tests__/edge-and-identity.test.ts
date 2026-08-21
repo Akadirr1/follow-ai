@@ -148,13 +148,17 @@ describe('add-source Edge call', () => {
 
   it('maps the server error envelope onto a typed DataError', async () => {
     await withSupabaseEnv(async () => {
+      // `parse_failed` is what the deployed function sends for "no feed here"
+      // (supabase/functions/_shared/error.ts). fix-005 keyed CODE_MAP on the real
+      // union; the old expectation here used `duplicate_source`, which no handler
+      // emits — an existing feed is a 200 with `created:false`.
       const { impl } = fakeFetch([
         {
-          status: 409,
+          status: 422,
           body: {
             error: {
-              code: 'duplicate_source',
-              message: 'already in the catalog',
+              code: 'parse_failed',
+              message: 'not a feed',
               retryable: false,
               request_id: 'req-1',
             },
@@ -165,9 +169,9 @@ describe('add-source Edge call', () => {
       const result = await repo.addSourceByUrl('https://example.com/feed.xml');
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe('duplicate_source');
+        expect(result.error.code).toBe('unsupported_source');
         expect(result.error.retryable).toBe(false);
-        expect(result.error.details).toEqual({ status: 409, serverCode: 'duplicate_source', requestId: 'req-1' });
+        expect(result.error.details).toEqual({ status: 422, serverCode: 'parse_failed', requestId: 'req-1' });
       }
     });
   });

@@ -325,9 +325,11 @@ describe('offline: cached feed survives a network failure', () => {
     // Cached rows stay on screen; the staleness is stated, not silent.
     expect(screen.getByText('Önbellekteki haber')).toBeTruthy();
     expect(await screen.findByText(/Çevrimdışı/, {}, { timeout: 3000 })).toBeTruthy();
-    // A retryable failure was retried before the banner appeared, not surrendered
-    // on the first attempt: 1 success + 1 attempt + 2 retries.
-    expect(call).toBe(4);
+    // P10 N2, fixed in fix-005: the read path used to cost 1 success + 1 attempt +
+    // 2 React Query retries = 4 repository calls, each of which is itself up to
+    // four postgrest-js attempts over ~7 s. Retrying is now left to the one layer
+    // that already does it, so a failed refetch is a single call.
+    expect(call).toBe(2);
   });
 
   it('restores yesterday’s rows from the persisted cache on a cold start', async () => {
@@ -447,18 +449,13 @@ describe('add-source: the Edge contract as the server actually answers it', () =
     expect(typeof body.client_request_id).toBe('string');
   });
 
-  it('BLOCKING B1: client_request_id is not the uuid v4 the server demands', async () => {
-    // `_shared/auth.ts` rejects a non-uuid `client_request_id` with 400
-    // bad_request, in both add-source and request-enrichment. The client mints
-    // `${Date.now().toString(36)}-${random}` instead, so **every** add-source and
-    // every summary request fails in supabase mode. Neither lane's own tests could
-    // see this: each asserted against its own assumption.
-    //
-    // This assertion pins the defect on purpose. When the one-line fix in
-    // src/data-access/supabase/edge.ts lands (see agents/reports/p10.md B1), flip
-    // both lines below — that is the tripwire telling the fixer this test exists.
-    expect(UUID_V4.test(clientRequestId())).toBe(false);
-    expect(clientRequestId()).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+  it('client_request_id is the uuid v4 the server demands (P10 B1, fixed in fix-005)', async () => {
+    // Both handlers run `isUuidV4` on this field and answer 400 bad_request
+    // otherwise, so a "unique enough" id fails every Edge write in supabase mode
+    // while every curl smoke passes. These two lines were inverted while the
+    // defect stood; they are the regression guard now.
+    expect(UUID_V4.test(clientRequestId())).toBe(true);
+    expect(clientRequestId()).not.toBe(clientRequestId());
   });
 
   it('maps the SSRF rejection to a typed error the sheet can phrase', async () => {
@@ -486,23 +483,33 @@ describe('add-source: the Edge contract as the server actually answers it', () =
     }
   });
 
-  it('records the not-a-feed copy drift between the lanes (p10.md N1)', async () => {
-    // The server answers `parse_failed` (P3 `_shared/error.ts`), but the client's
-    // CODE_MAP only knows `not_a_feed`, so a perfectly valid https URL that is not
-    // a feed gets told to start with https://. This pins today's behaviour so the
-    // one-line CODE_MAP fix has a tripwire; it is a copy defect, not a crash.
+  it('tells a not-a-feed URL what is actually wrong (P10 N1, fixed in fix-005)', async () => {
+    // The server answers `parse_failed`; before fix-005 the client's CODE_MAP knew
+    // only `not_a_feed`, so a perfectly valid https URL with no feed behind it was
+    // told to start with https://.
     const { result } = await call({ status: 422, code: 'parse_failed', message: 'not a feed' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe('invalid_input');
+      expect(result.error.code).toBe('unsupported_source');
       expect(result.error.details).toMatchObject({ serverCode: 'parse_failed', status: 422 });
-      // What the user is told today — and what they should be told instead.
-      expect(addSourceErrorTr(result.error)).toBe('Geçerli bir adres gir (https:// ile başlamalı).');
-      expect(addSourceErrorTr({ ...result.error, code: 'unsupported_source' })).toBe(
-        'Bu adres bir RSS/Atom akışı değil ya da desteklenmiyor.',
+      expect(addSourceErrorTr(result.error)).toBe(
+        'Bu adreste okunabilir bir RSS/Atom akışı bulunamadı.',
       );
     }
   });
+
+  it.each(['not_a_feed', 'no_feed_discovered', 'empty_feed'])(
+    'gives %s the same no-feed sentence',
+    async (code) => {
+      const { result } = await call({ status: 422, code, message: 'nothing here' });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(addSourceErrorTr(result.error)).toBe(
+          'Bu adreste okunabilir bir RSS/Atom akışı bulunamadı.',
+        );
+      }
+    },
+  );
 });
 
 describe('onboarding guard + notification scheduling', () => {

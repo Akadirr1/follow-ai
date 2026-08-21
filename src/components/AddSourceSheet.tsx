@@ -17,16 +17,41 @@ export const SOURCE_CATEGORIES = [
 ] as const;
 
 /**
+ * Server codes that all mean the same thing to a reader: the address is fine,
+ * there is simply no feed behind it. They are checked ahead of `error.code`
+ * because they all arrive as `unsupported_source`, whose generic copy is also
+ * used by the local https/credential rejections (P10 N1).
+ */
+const NO_FEED_SERVER_CODES = new Set([
+  'parse_failed',
+  'not_a_feed',
+  'no_feed_discovered',
+  'empty_feed',
+]);
+
+const serverCodeOf = (error: DataError): string | null => {
+  const code = error.details?.serverCode;
+  return typeof code === 'string' ? code : null;
+};
+
+/**
  * Turkish copy for the typed errors `addSourceByUrl` can return. Each one names
  * what the user can do about it — "bir hata oluştu" for a bad URL and for a
  * duplicate would make both look like the app's fault.
  */
 export function addSourceErrorTr(error: DataError): string {
+  const serverCode = serverCodeOf(error);
+  if (serverCode !== null && NO_FEED_SERVER_CODES.has(serverCode)) {
+    return 'Bu adreste okunabilir bir RSS/Atom akışı bulunamadı.';
+  }
+
   switch (error.code) {
     case 'invalid_input':
       return 'Geçerli bir adres gir (https:// ile başlamalı).';
     case 'unsupported_source':
       return 'Bu adres bir RSS/Atom akışı değil ya da desteklenmiyor.';
+    // Reachable in mock mode only: the server answers an existing feed with a
+    // 200 and `created:false`, never an error (see CODE_MAP in supabase/edge.ts).
     case 'duplicate_source':
       return 'Bu kaynak zaten ekli.';
     case 'rate_limited':

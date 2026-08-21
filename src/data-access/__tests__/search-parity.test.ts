@@ -1,4 +1,5 @@
 import { createMockRepositories } from '../mock';
+import { NO_CONTENT_ARTICLE } from '../mock/mapper';
 
 /**
  * Search behaviour, previously asserted against the store's `selectResults` as an
@@ -21,7 +22,9 @@ describe('mock search', () => {
     ['openai', ['oa']],
     ['ALPHAFOLD', ['gd']],
     ['alphafold', ['gd']],
-    ['hugging face', ['hf']],
+    // Two Hugging Face articles since fix-005: the prototype one and the
+    // body-less fixture that reaches `unavailable/no_content`.
+    ['hugging face', ['hf', NO_CONTENT_ARTICLE.id]],
     ['türkiye', ['wz']],
     ['zzzz', []],
     ['', []],
@@ -37,7 +40,7 @@ describe('mock search', () => {
 
   it('matches on title, source name and category', async () => {
     expect(await searchIds('alphafold')).toEqual(['gd']); // title
-    expect(await searchIds('hugging face')).toEqual(['hf']); // source name
+    expect(await searchIds('hugging face')).toEqual(['hf', NO_CONTENT_ARTICLE.id]); // source name
     expect(await searchIds('türkiye')).toEqual(['wz']); // category
   });
 

@@ -62,7 +62,13 @@ export default function ArticleScreen() {
 
   const summary =
     enrichment.data?.status === 'ready' ? enrichment.data.summary : article?.summary;
-  const pending = summary?.translationState === 'pending' || !summary;
+  /**
+   * Terminal: the server looked and there is no body to summarise (an
+   * excerpt-only feed item). Only when nothing else can be shown — a summary
+   * already carried on the feed row still wins over a later `unavailable`.
+   */
+  const unavailable = enrichment.data?.status === 'unavailable' && !summary;
+  const pending = !unavailable && (summary?.translationState === 'pending' || !summary);
 
   const segment = segmentState(article, summary);
   // Default to the Turkish rendering when there is one, as the prototype did.
@@ -162,14 +168,20 @@ export default function ArticleScreen() {
           <View style={styles.summaryHead}>
             <SparkleIcon color={palette.accentText} />
             <Text style={styles.summaryLabel}>AI TR ÖZET</Text>
-            {pending ? null : (
+            {pending || unavailable ? null : (
               <View style={styles.countPill}>
                 <Text style={styles.countText}>{summary?.bullets.length ?? 3} madde</Text>
               </View>
             )}
           </View>
 
-          {pending ? (
+          {unavailable ? (
+            // No spinner and no "hazırlanıyor": this will not change by waiting,
+            // so the card says so once and points at the footer's "Kaynağa git".
+            <Text style={styles.pendingText}>
+              Bu haber için özet üretilemiyor; kaynağa git.
+            </Text>
+          ) : pending ? (
             // addendum §E: with no Anthropic key the job stays queued. This is a
             // first-class state, and the article body below stays readable.
             <View style={styles.pendingRow}>
@@ -185,7 +197,7 @@ export default function ArticleScreen() {
             ))
           )}
 
-          {pending ? null : (
+          {pending || unavailable ? null : (
             <Text style={styles.credit}>Claude ile çevrildi ve özetlendi</Text>
           )}
         </View>

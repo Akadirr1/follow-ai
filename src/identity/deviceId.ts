@@ -20,8 +20,12 @@ export const isDeviceId = (value: unknown): value is string =>
  * uuid v4 from `crypto.getRandomValues`, which React Native, Hermes and every
  * browser provide. `crypto.randomUUID` is not used because it is missing on some
  * RN runtimes; this path is the same everywhere.
+ *
+ * Named for what it produces rather than for its first caller: the Edge
+ * idempotency key needs the same uuid v4, and every server handler validates the
+ * shape (P10 B1 — a home-grown "unique enough" id was rejected with 400).
  */
-export function generateDeviceId(): string {
+export function randomUuidV4(): string {
   const bytes = new Uint8Array(16);
   const cryptoObj = (globalThis as { crypto?: Crypto }).crypto;
   if (cryptoObj?.getRandomValues) {
@@ -39,6 +43,9 @@ export function generateDeviceId(): string {
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
+
+/** The device-identity spelling of the same generator. */
+export const generateDeviceId = randomUuidV4;
 
 /** In-flight promise, so concurrent callers on first run cannot mint two ids. */
 let pending: Promise<string> | null = null;
