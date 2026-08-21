@@ -11,6 +11,7 @@ import { openArticle } from '../../src/navigation/openArticle';
 import type { Palette } from '../../src/theme/palettes';
 import { useThemedStyles } from '../../src/theme/ThemeProvider';
 import { fonts, mono, radius, TAB_BAR_SPACE } from '../../src/theme/typography';
+import { useDigestNotifications } from '../../src/notifications/useDigestNotifications';
 import { useUserSettings } from '../../src/user-state/hooks';
 
 const MONTHS_TR_UPPER = [
@@ -38,6 +39,7 @@ export default function DigestScreen() {
   const styles = useThemedStyles(createStyles);
   const digest = useDigest();
   const { settings } = useUserSettings();
+  const notifications = useDigestNotifications();
 
   if (digest.isPending) {
     return (
@@ -80,7 +82,13 @@ export default function DigestScreen() {
           <Text style={styles.headline}>Bugünün AI Gündemi</Text>
           <View style={styles.badgeRow}>
             <View style={styles.readyBadge}>
-              <Text style={styles.readyText}>Hazır · {settings.digestTime}</Text>
+              <Text style={styles.readyText}>
+                {/* The badge states what is actually armed, not just the stored
+                    preference: a reminder the OS will not deliver should not
+                    read as if it will. */}
+                Hazır · {settings.digestTime}
+                {settings.digestEnabled && notifications.canNotify ? ' · bildirim açık' : ''}
+              </Text>
             </View>
             <Text style={styles.meta}>{ready.items.length} haber · ~3 dk</Text>
           </View>

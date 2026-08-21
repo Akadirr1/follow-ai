@@ -15,7 +15,14 @@ import {
   type ThemePreference,
 } from '../../src/theme/ThemeProvider';
 import { fonts, mono, radius, TAB_BAR_SPACE } from '../../src/theme/typography';
+import { useDigestNotifications } from '../../src/notifications/useDigestNotifications';
 import { useUserSettings } from '../../src/user-state/hooks';
+
+/** Shown when the OS refused, or cannot deliver, the daily reminder. */
+export const PERMISSION_HINT =
+  'Bildirim izni kapalı. Digest saatin kayıtlı; bildirimleri telefon ayarlarından açabilirsin.';
+export const UNSUPPORTED_HINT =
+  'Bildirimler bu platformda çalışmıyor. Digest sekmesinden yine de okuyabilirsin.';
 
 const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
   { value: 'dark', label: 'Koyu' },
@@ -40,14 +47,45 @@ export default function SettingsScreen() {
   const styles = useThemedStyles(createStyles);
   const { preference, setPreference } = useThemePreference();
   const { settings, update } = useUserSettings();
+  const notifications = useDigestNotifications();
   const { showToast } = useToast();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [permissionHint, setPermissionHint] = useState<string | null>(null);
 
-  const saveDigestTime = (time: DigestTime) => {
-    // P9 owns the notification schedule; P7 only persists the preference.
-    update({ digestTime: time });
+  /**
+   * Changing the time reschedules when the reminder is on: the service schedules
+   * the new trigger, persists its id and only then cancels the old one, so a
+   * failure leaves yesterday's reminder alive rather than none at all.
+   */
+  const saveDigestTime = async (time: DigestTime) => {
     setSheetOpen(false);
+    if (settings.digestEnabled) {
+      const result = await notifications.enable(time);
+      if (!result.ok && result.status === 'permission_denied') {
+        setPermissionHint(PERMISSION_HINT);
+        showToast(TOASTS.digestTime);
+        return;
+      }
+    } else {
+      update({ digestTime: time });
+    }
     showToast(TOASTS.digestTime);
+  };
+
+  /** The switch is now the real thing: it schedules and cancels. */
+  const toggleDigestNotification = async () => {
+    setPermissionHint(null);
+    if (settings.digestEnabled) {
+      await notifications.disable();
+      return;
+    }
+    const result = await notifications.enable(settings.digestTime);
+    if (!result.ok && result.status === 'permission_denied') {
+      // Denial keeps the time and leaves the flag off (arch-001 §4).
+      setPermissionHint(PERMISSION_HINT);
+    } else if (!result.ok && result.status === 'unsupported') {
+      setPermissionHint(UNSUPPORTED_HINT);
+    }
   };
 
   return (
@@ -102,10 +140,18 @@ export default function SettingsScreen() {
               </View>
               <Toggle
                 on={settings.digestEnabled}
-                onToggle={() => update({ digestEnabled: !settings.digestEnabled })}
+                onToggle={() => void toggleDigestNotification()}
                 accessibilityLabel="Digest bildirimi"
               />
             </View>
+            {permissionHint ? (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.hint} accessibilityRole="alert">
+                  {permissionHint}
+                </Text>
+              </>
+            ) : null}
           </View>
         </View>
 
@@ -160,7 +206,7 @@ export default function SettingsScreen() {
         visible={sheetOpen}
         value={settings.digestTime}
         onClose={() => setSheetOpen(false)}
-        onSave={saveDigestTime}
+        onSave={(time) => void saveDigestTime(time)}
       />
     </SafeAreaView>
   );
@@ -236,4 +282,11 @@ const createStyles = (palette: Palette) => ({
   segTextOn: { color: palette.onAccent },
   segTextOff: { color: palette.text6 },
   version: { fontFamily: mono, fontSize: 12, color: palette.text5 },
+  hint: {
+    fontSize: 12,
+    fontFamily: fonts.r,
+    color: palette.text6,
+    lineHeight: 18,
+    paddingVertical: 12,
+  },
 });

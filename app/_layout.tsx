@@ -9,13 +9,15 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastProvider } from '../src/components/ToastProvider';
 import { QueryProvider } from '../src/providers/QueryProvider';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
+import { useNotificationDeepLink } from '../src/notifications/useNotificationDeepLink';
+import { getOnboardingCompletedAt } from '../src/user-state/onboarding';
 
 /**
  * Hold the native splash from the moment this module is evaluated. Everything
@@ -39,9 +41,36 @@ SplashScreen.preventAutoHideAsync().catch((error: unknown) => {
  * A font *failure* still counts as settled: `ThemeProvider` falls back to the
  * system face and the app is usable, whereas waiting forever is not.
  */
-export function isAppReady(input: { fontsLoaded: boolean; fontError: unknown; themeReady: boolean }): boolean {
+export function isAppReady(input: {
+  fontsLoaded: boolean;
+  fontError: unknown;
+  themeReady: boolean;
+  onboardingReady: boolean;
+}): boolean {
   const fontsSettled = input.fontsLoaded || input.fontError != null;
-  return fontsSettled && input.themeReady;
+  return fontsSettled && input.themeReady && input.onboardingReady;
+}
+
+/**
+ * Whether onboarding has been completed, as a tri-state: `null` while the kv
+ * read is in flight. It joins the launch gate (P9) so the first painted frame is
+ * already the right one — deciding after paint would flash the tabs at a user
+ * who has never chosen a source.
+ */
+export function useOnboardingState(): { completed: boolean; isReady: boolean } {
+  const [completedAt, setCompletedAt] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    getOnboardingCompletedAt().then((value) => {
+      if (!cancelled) setCompletedAt(value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { completed: Boolean(completedAt), isReady: completedAt !== undefined };
 }
 
 export default function RootLayout() {
@@ -77,7 +106,15 @@ export default function RootLayout() {
 
 function ThemedApp({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: unknown }) {
   const { palette, scheme, isReady: themeReady } = useTheme();
-  const ready = isAppReady({ fontsLoaded, fontError, themeReady });
+  const onboarding = useOnboardingState();
+  // Tapping the daily reminder lands on the Digest tab.
+  useNotificationDeepLink();
+  const ready = isAppReady({
+    fontsLoaded,
+    fontError,
+    themeReady,
+    onboardingReady: onboarding.isReady,
+  });
 
   useEffect(() => {
     if (!ready) return;
@@ -105,9 +142,19 @@ function ThemedApp({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError
               animation: 'slide_from_right',
             }}
           >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="article/[id]" />
-            <Stack.Screen name="search" options={{ animation: 'fade' }} />
+            {/*
+              The guard is structural, not a redirect: an incomplete device has
+              no `(tabs)` route to navigate to, so Back and a cold restart cannot
+              step around onboarding (arch-001 §4).
+            */}
+            <Stack.Protected guard={!onboarding.completed}>
+              <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+            </Stack.Protected>
+            <Stack.Protected guard={onboarding.completed}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="article/[id]" />
+              <Stack.Screen name="search" options={{ animation: 'fade' }} />
+            </Stack.Protected>
           </Stack>
         </View>
       </ToastProvider>
