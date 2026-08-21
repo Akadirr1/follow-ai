@@ -16,6 +16,7 @@
 import { AppError } from './error.ts';
 import type {
   ArticleForEnrichment,
+  ChargedEnqueueResult,
   EnqueueResult,
   EnrichmentDb,
   EnrichmentJob,
@@ -81,6 +82,46 @@ export function createEnrichmentDb(
       );
       if (!row) throw new AppError('upstream_error', 'Job could not be enqueued.');
       return row;
+    },
+
+    /**
+     * rev-003 N1. One round trip that both decides newness and charges, so a
+     * poll for an already-queued job costs the caller nothing.
+     */
+    async enqueueJobCharged(input) {
+      const row = firstRow(
+        await call<ChargedEnqueueResult[] | ChargedEnqueueResult | null>(
+          'internal_enqueue_ai_job_charged',
+          {
+            p_article_id: input.articleId,
+            p_content_hash: input.contentHash,
+            p_prompt_version: input.promptVersion,
+            p_model: input.model,
+            p_subject: input.subject,
+            p_action: input.action,
+            p_window_start: input.windowStart,
+            p_limit: input.limit,
+          },
+        ),
+      );
+      if (!row) throw new AppError('upstream_error', 'Job could not be enqueued.');
+      return row;
+    },
+
+    /**
+     * rev-003 B1. The inverse of leasing: clears the lease and gives back the
+     * attempt leasing consumed. Lease-token guarded in SQL, so a worker whose
+     * lease expired cannot rewind a job another worker now owns.
+     */
+    async releaseJobUnattempted(jobId, leaseToken, availableAt, errorCode) {
+      return (
+        (await call<boolean>('internal_release_ai_job_unattempted', {
+          p_job_id: jobId,
+          p_lease_token: leaseToken,
+          p_available_at: availableAt,
+          p_error_code: errorCode,
+        })) === true
+      );
     },
 
     async leaseJobs(n) {

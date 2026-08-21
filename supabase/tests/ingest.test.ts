@@ -413,6 +413,60 @@ describe('runIngestion', () => {
     expect(result.sources_ok).toBe(1);
   });
 
+  /**
+   * rev-003 N4. The failure was caught with no warning and no result flag, so
+   * the request log reported a clean run while a stale `finished_at IS NULL`
+   * row sat in a private table only someone already suspicious would query.
+   */
+  it('warns once when closing the run fails, with the run id and no content', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { gateway } = fakeGateway({ sources: [good] });
+      const brokenGateway = {
+        ...(gateway as unknown as Record<string, unknown>),
+        finishIngestionRun: async () => {
+          throw new TypeError('run row write failed');
+        },
+      } as unknown as IngestDeps['gateway'];
+
+      const result = await runIngestion(
+        deps(brokenGateway, async () => okFetch(RSS_OPENAI)),
+        { trigger: 'cron' },
+      );
+
+      // The articles still landed — the warning does not change that.
+      expect(result.sources_ok).toBe(1);
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      const logged = JSON.parse(warn.mock.calls[0][0] as string);
+      expect(logged).toEqual({
+        event: 'ingestion_run_close_failed',
+        run_id: 'run-0001',
+        code: 'TypeError',
+      });
+
+      // Bounded and non-sensitive: a short code, never a feed URL, an article
+      // title or the upstream error text (arch-001 §3).
+      const serialised = JSON.stringify(logged);
+      expect(serialised).not.toContain('run row write failed');
+      expect(serialised).not.toContain('https://');
+      expect(serialised.length).toBeLessThan(200);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('stays silent when the run closes cleanly', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { gateway } = fakeGateway({ sources: [good] });
+      await runIngestion(deps(gateway, async () => okFetch(RSS_OPENAI)), { trigger: 'cron' });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('does not lose committed work when closing the run fails', async () => {
     const { gateway } = fakeGateway({ sources: [good] });
     const broken_gateway = {

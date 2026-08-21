@@ -136,7 +136,18 @@ export async function runIngestion(
   // A failure to close the run must not lose the work that already landed.
   try {
     await deps.gateway.finishIngestionRun(runId, counts, errorSummary);
-  } catch {
+  } catch (cause) {
+    // rev-003 N4: say it once, boundedly. Swallowing this silently left the
+    // request log reporting a clean run while a stale `finished_at IS NULL`
+    // row sat in a private table only someone already suspicious would query.
+    // Run id and a short code, never feed or article content (arch-001 §3).
+    console.warn(
+      JSON.stringify({
+        event: 'ingestion_run_close_failed',
+        run_id: runId,
+        code: cause instanceof Error ? cause.name.slice(0, 40) : 'unknown',
+      }),
+    );
     // Swallowed on purpose: the articles are committed, and the run row is
     // observability, not truth. The stale open row is visible in
     // private.ingestion_runs as finished_at IS NULL.

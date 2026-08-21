@@ -103,7 +103,13 @@ export function buildArticleBlock(
   maxChars: number = MAX_ARTICLE_CHARS_DEFAULT,
 ): ArticleBlock {
   const limit = Math.max(500, Math.floor(maxChars));
-  const body = article.contentText.trim();
+  // rev-003 B3: strip the fence markers from the BODY too, and do it BEFORE
+  // truncation. The body is the one value rendered inside the fence, so a feed
+  // that published the exact closing marker could end the untrusted region
+  // early and have whatever followed read as instructions — enough to corrupt a
+  // shared cached summary while still satisfying the JSON schema. Stripping
+  // after the cut would also let a truncation land mid-marker.
+  const body = stripMarkers(article.contentText).trim();
   const truncated = body.length > limit;
   const sent = truncated ? cutOnBoundary(body, limit) : body;
 
@@ -138,12 +144,23 @@ export function buildArticleBlock(
  * let the rest of that title read as instructions. Cheap, and the alternative
  * is a working prompt injection through an RSS `<title>`.
  */
+/**
+ * Remove both fence markers.
+ *
+ * Every value that reaches the prompt goes through this — the header fields
+ * rendered outside the fence and the article body rendered inside it — so
+ * exactly one place decides what a marker is and the two cannot drift apart.
+ *
+ * Removal, not escaping: the markers are arbitrary tokens no real article
+ * contains, so deleting them loses nothing, whereas an escaped marker would
+ * still depend on the model respecting the escape.
+ */
+export function stripMarkers(value: string): string {
+  return value.split(ARTICLE_OPEN).join('').split(ARTICLE_CLOSE).join('');
+}
+
 function sanitiseLine(value: string): string {
-  return value
-    .split(ARTICLE_OPEN)
-    .join('')
-    .split(ARTICLE_CLOSE)
-    .join('')
+  return stripMarkers(value)
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 500);

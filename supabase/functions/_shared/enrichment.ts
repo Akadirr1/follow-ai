@@ -101,6 +101,13 @@ export type EnrichmentJob = ArticleForEnrichment & {
 
 export type EnqueueResult = { job_id: string; status: string; created: boolean };
 
+export type ChargedEnqueueResult = EnqueueResult & {
+  /** True only when this call actually spent one of the caller's misses. */
+  charged: boolean;
+  /** False when the budget was spent; no job was created in that case. */
+  allowed: boolean;
+};
+
 export interface EnrichmentDb {
   findSummary(
     articleId: string,
@@ -125,6 +132,30 @@ export interface EnrichmentDb {
     errorCode: string,
   ): Promise<boolean>;
   failJob(jobId: string, leaseToken: string, errorCode: string): Promise<boolean>;
+  /**
+   * Return a leased job to the queue AND give back the attempt that leasing
+   * consumed. Only for deferrals that made no Claude call — see the cap path.
+   */
+  releaseJobUnattempted(
+    jobId: string,
+    leaseToken: string,
+    availableAt: string,
+    errorCode: string,
+  ): Promise<boolean>;
+  /**
+   * Atomic "return the existing job, or charge and create a new one". Replaces
+   * bump-then-enqueue so polling an existing job costs no quota (rev-003 N1).
+   */
+  enqueueJobCharged(input: {
+    articleId: string;
+    contentHash: string;
+    promptVersion: string;
+    model: string;
+    subject: string;
+    action: EnrichmentAction;
+    windowStart: string;
+    limit: number;
+  }): Promise<ChargedEnqueueResult>;
   bumpRateLimit(
     subject: string,
     action: EnrichmentAction,
@@ -224,30 +255,31 @@ export async function requestEnrichment(
     return { status: 'unavailable', reason: 'no_content' };
   }
 
-  // A miss is about to cost a Claude call, so it comes out of the tight budget.
+  // rev-003 N1: charging and enqueueing are ONE atomic call. The old order
+  // charged the daily budget and only then discovered whether the job already
+  // existed, so a client following the poll interval it was handed spent quota
+  // on work that was already queued — 2.5 hours to exhaust a day at the no-key
+  // interval. Now an existing job comes back uncharged, and only a genuinely
+  // new one costs a miss.
   const missWindow = windowFor(now, MISS_POLICY.windowSeconds);
-  const missAllowed = await deps.db.bumpRateLimit(
-    input.deviceId,
-    MISS_POLICY.action,
-    missWindow.windowStart,
-    MISS_POLICY.limit,
-  );
-  if (!missAllowed) {
+  const job = await deps.db.enqueueJobCharged({
+    articleId: article.article_id,
+    contentHash: article.content_hash,
+    promptVersion,
+    model,
+    subject: input.deviceId,
+    action: MISS_POLICY.action,
+    windowStart: missWindow.windowStart,
+    limit: MISS_POLICY.limit,
+  });
+
+  if (!job.allowed) {
     return {
       status: 'rate_limited',
       retryAfterSeconds: missWindow.retryAfterSeconds,
       scope: 'miss',
     };
   }
-
-  // Idempotent: the unique index on (article_id, content_hash, prompt_version,
-  // model) means a second request for the same article returns the same job.
-  const job = await deps.db.enqueueJob({
-    articleId: article.article_id,
-    contentHash: article.content_hash,
-    promptVersion,
-    model,
-  });
 
   // A job that already exhausted its attempts is terminal — `enqueueJob` does
   // not revive it — so telling the client to poll again in 30 seconds would be
@@ -311,7 +343,12 @@ export type JobOutcome = {
 };
 
 export type ProcessResult = {
-  skipped?: 'no_api_key' | 'daily_cap';
+  /**
+   * `disabled` is the operator kill switch (AI_DAILY_CAP=0), distinct from
+   * `daily_cap` (budget spent for today) and from `no_api_key`. All three
+   * touch no jobs; only the reason differs.
+   */
+  skipped?: 'no_api_key' | 'daily_cap' | 'disabled';
   ready: number;
   retried: number;
   failed: number;
@@ -338,13 +375,22 @@ export async function processEnrichments(
     return { ...empty, skipped: 'no_api_key' };
   }
 
+  // rev-003 N3: AI_DAILY_CAP=0 is an operator kill switch, and it has to be
+  // honoured BEFORE leasing. The config layer accepts 0 but
+  // `private.bump_rate_limit` rejects any limit below 1, so the old order
+  // leased jobs — incrementing their attempts — and then turned the cap check
+  // into a function error. Nothing is touched here.
+  const dailyCap = deps.dailyCap ?? AI_DAILY_CAP_DEFAULT;
+  if (dailyCap <= 0) {
+    return { ...empty, skipped: 'disabled' };
+  }
+
   const maxJobs = clampInt(options.maxJobs ?? 1, 1, MAX_JOBS_PER_RUN);
   const jobs = await deps.db.leaseJobs(maxJobs);
   if (jobs.length === 0) return empty;
 
   const now = deps.now();
   const dayWindow = windowFor(now, DAY_SECONDS);
-  const dailyCap = deps.dailyCap ?? AI_DAILY_CAP_DEFAULT;
   const outcomes: JobOutcome[] = [];
   let cappedOut = false;
 
@@ -474,14 +520,32 @@ export async function runOneJob(
     : { ...base, disposition: 'lease_lost', code: 'lease_lost' };
 }
 
-/** Put a leased-but-unattempted job back without consuming an attempt. */
+/**
+ * Put a leased-but-unattempted job back, and give back the attempt.
+ *
+ * rev-003 B1: this comment used to claim "without consuming an attempt" while
+ * calling the ordinary retry RPC, which clears the lease and leaves the
+ * increment leasing made. Every capped worker firing therefore burned an
+ * attempt on three jobs Claude never saw; a job at four attempts came back at
+ * five, and private.lease_ai_jobs requires attempt_count < max_attempts, so it
+ * was stranded forever — never summarised, never failed, invisible.
+ *
+ * releaseJobUnattempted is the explicit inverse of leasing and is used ONLY
+ * here, where no Claude call was made. Every other path keeps the increment,
+ * because it really did spend an attempt.
+ */
 async function requeueForCap(
   deps: ProcessDeps,
   job: EnrichmentJob,
   retryAfterSeconds: number,
 ): Promise<JobOutcome> {
   const availableAt = addSeconds(deps.now(), retryAfterSeconds);
-  const ok = await deps.db.retryJob(job.job_id, job.lease_token, availableAt, 'daily_cap');
+  const ok = await deps.db.releaseJobUnattempted(
+    job.job_id,
+    job.lease_token,
+    availableAt,
+    'daily_cap',
+  );
   return {
     jobId: job.job_id,
     articleId: job.article_id,

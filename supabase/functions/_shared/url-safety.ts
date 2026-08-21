@@ -269,8 +269,22 @@ export async function safeFetch(
 
   let current = raw;
   let redirects = 0;
-  const deadline = Date.now() + timeoutMs;
 
+  // ONE controller and ONE timer for the entire call — DNS, every redirect hop,
+  // and the full capped body read. The previous version cleared the timer as
+  // soon as `fetchImpl` resolved, which meant the 8- and 10-second budgets ended
+  // at the response HEADERS: a server could return headers instantly and then
+  // trickle or stall the body forever under the 1 MiB cap, holding an Edge
+  // invocation or an ingestion concurrency slot open indefinitely.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetchWithinDeadline();
+  } finally {
+    clearTimeout(timer);
+  }
+
+  async function fetchWithinDeadline(): Promise<SafeFetchResult> {
   for (;;) {
     const check = await checkUrlSafety(current, {
       resolve: options.resolve,
@@ -280,11 +294,8 @@ export async function safeFetch(
       return { ok: false, kind: 'unsafe_url', reason: check.reason, detail: check.detail };
     }
 
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) return { ok: false, kind: 'timeout' };
+    if (controller.signal.aborted) return { ok: false, kind: 'timeout' };
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), remaining);
     let response: Response;
     try {
       response = await options.fetchImpl(check.url, {
@@ -296,15 +307,15 @@ export async function safeFetch(
         signal: controller.signal,
       });
     } catch (cause) {
-      clearTimeout(timer);
-      const aborted = controller.signal.aborted;
-      return aborted
+      return controller.signal.aborted
         ? { ok: false, kind: 'timeout' }
         : { ok: false, kind: 'network_error', detail: shortReason(cause) };
     }
-    clearTimeout(timer);
 
     if (REDIRECT_STATUSES.has(response.status)) {
+      // Nothing here reads the redirect's body, so release it instead of
+      // leaving the connection holding an unread stream.
+      await discardBody(response);
       if (redirects >= maxRedirects) return { ok: false, kind: 'too_many_redirects' };
       const location = response.headers.get('location');
       if (!location) return { ok: false, kind: 'redirect_without_location' };
@@ -321,6 +332,7 @@ export async function safeFetch(
     }
 
     if (response.status === 304) {
+      await discardBody(response);
       return {
         ok: true,
         status: 304,
@@ -333,10 +345,11 @@ export async function safeFetch(
     }
 
     if (response.status < 200 || response.status >= 300) {
+      await discardBody(response);
       return { ok: false, kind: 'http_error', status: response.status };
     }
 
-    const read = await readCapped(response, maxBytes);
+    const read = await readCapped(response, maxBytes, controller.signal);
     if (!read.ok) return read;
 
     return {
@@ -349,6 +362,36 @@ export async function safeFetch(
       byteLength: read.byteLength,
     };
   }
+  }
+}
+
+/**
+ * Release a response body this code will never read.
+ *
+ * A redirect, a 304 and an HTTP error all arrive with a stream attached. Left
+ * unread, that stream keeps the connection alive until the runtime garbage
+ * collects it; cancelling returns it immediately. Failures are swallowed
+ * because a body that cannot be cancelled is already gone.
+ */
+async function discardBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Already closed, already errored, or the runtime does not expose it.
+  }
+}
+
+/** Resolves with the sentinel when the signal aborts; never rejects. */
+const ABORTED: unique symbol = Symbol('aborted');
+
+function whenAborted(signal: AbortSignal): Promise<typeof ABORTED> {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve(ABORTED);
+      return;
+    }
+    signal.addEventListener('abort', () => resolve(ABORTED), { once: true });
+  });
 }
 
 function shortReason(cause: unknown): string {
@@ -356,24 +399,68 @@ function shortReason(cause: unknown): string {
   return 'error';
 }
 
-/** Read a body under a hard byte cap, decoding with the declared charset. */
+type ReadResult =
+  | { ok: true; text: string; byteLength: number }
+  | { ok: false; kind: 'too_large' }
+  | { ok: false; kind: 'timeout' };
+
+/**
+ * Read a body under a hard byte cap AND the call's deadline.
+ *
+ * The deadline is enforced by racing every `read()` against the abort signal
+ * rather than by trusting the runtime to tear the stream down: with a real
+ * `fetch` an abort does reject the stream, but a stalled peer that keeps the
+ * connection open below the byte cap is exactly the case that used to hang
+ * forever, and a hand-built stream in a test is not wired to the signal at all.
+ * Racing covers both.
+ *
+ * The race resolves with a sentinel instead of rejecting, so a read that wins
+ * cannot leave an unhandled rejection behind.
+ */
 async function readCapped(
   response: Response,
   maxBytes: number,
-): Promise<{ ok: true; text: string; byteLength: number } | { ok: false; kind: 'too_large' }> {
+  signal?: AbortSignal,
+): Promise<ReadResult> {
   const declared = response.headers.get('content-length');
   if (declared !== null && Number(declared) > maxBytes) {
+    await discardBody(response);
     return { ok: false, kind: 'too_large' };
+  }
+
+  if (signal?.aborted) {
+    await discardBody(response);
+    return { ok: false, kind: 'timeout' };
   }
 
   let bytes: Uint8Array;
   const body = response.body as ReadableStream<Uint8Array> | null;
   if (body && typeof body.getReader === 'function') {
     const reader = body.getReader();
+    // One listener for the whole read, not one per chunk.
+    const aborted = signal ? whenAborted(signal) : null;
     const chunks: Uint8Array[] = [];
     let total = 0;
     for (;;) {
-      const { done, value } = await reader.read();
+      let step: ReadableStreamReadResult<Uint8Array> | typeof ABORTED;
+      try {
+        step = aborted
+          ? await Promise.race([reader.read(), aborted])
+          : await reader.read();
+      } catch (cause) {
+        // A real runtime rejects the pending read when the signal fires.
+        await reader.cancel().catch(() => undefined);
+        return signal?.aborted
+          ? { ok: false, kind: 'timeout' }
+          : Promise.reject(cause);
+      }
+
+      if (step === ABORTED) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, kind: 'timeout' };
+      }
+
+      const { done, value } = step;
       if (done) break;
       if (!value) continue;
       total += value.byteLength;
@@ -390,9 +477,13 @@ async function readCapped(
       offset += chunk.byteLength;
     }
   } else {
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > maxBytes) return { ok: false, kind: 'too_large' };
-    bytes = new Uint8Array(buffer);
+    // No stream to race: bound the whole read instead.
+    const buffered = signal
+      ? await Promise.race([response.arrayBuffer(), whenAborted(signal)])
+      : await response.arrayBuffer();
+    if (buffered === ABORTED) return { ok: false, kind: 'timeout' };
+    if (buffered.byteLength > maxBytes) return { ok: false, kind: 'too_large' };
+    bytes = new Uint8Array(buffered);
   }
 
   return {

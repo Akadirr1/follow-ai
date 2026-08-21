@@ -465,6 +465,141 @@ describe('safeFetch', () => {
     if (!result.ok) expect(result.kind).toBe('timeout');
   });
 
+  /**
+   * rev-003 B2. The old deadline ended at the response HEADERS: the abort timer
+   * was cleared as soon as `fetchImpl` resolved, and the body was then read with
+   * no timer at all. A server that answers instantly and then stalls below the
+   * 1 MiB cap held an Edge invocation — or an ingestion concurrency slot — open
+   * forever. The pre-existing timeout test stalls BEFORE headers, so it could
+   * not see this.
+   */
+  it('times out when the body stalls after the headers arrive', async () => {
+    let cancelled = false;
+    const started = Date.now();
+
+    const result = await safeFetch('https://example.org/trickle', {
+      fetchImpl: async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(ctrl) {
+              // One chunk, then silence: never closes, never errors, and stays
+              // far below the byte cap.
+              ctrl.enqueue(new TextEncoder().encode('<rss>'));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+          { status: 200 },
+        ),
+      resolve: openResolver,
+      requireDns: true,
+      timeoutMs: 60,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.kind).toBe('timeout');
+    // Within the budget, not "eventually".
+    expect(Date.now() - started).toBeLessThan(3000);
+    // The stalled stream is released rather than abandoned.
+    expect(cancelled).toBe(true);
+  });
+
+  it('counts the whole redirect chain against one deadline', async () => {
+    // Each hop answers, so the old per-hop timer would have restarted three
+    // times and allowed 4x the stated budget.
+    const started = Date.now();
+    const result = await safeFetch('https://example.org/1', {
+      fetchImpl: async (input) => {
+        await new Promise((r) => setTimeout(r, 40));
+        const next = Number(input.slice(-1)) + 1;
+        return new Response('', { status: 302, headers: { location: `/${next}` } });
+      },
+      resolve: openResolver,
+      requireDns: true,
+      timeoutMs: 60,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.kind).toBe('timeout');
+    expect(Date.now() - started).toBeLessThan(3000);
+  });
+
+  it('cancels a redirect body instead of abandoning the stream', async () => {
+    let cancelled = false;
+    const routes: Record<string, () => Response> = {
+      'https://example.org/1': () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(ctrl) {
+              ctrl.enqueue(new TextEncoder().encode('ignored redirect body'));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+          { status: 301, headers: { location: '/2' } },
+        ),
+      'https://example.org/2': () => new Response('<rss/>', { status: 200 }),
+    };
+
+    const result = await safeFetch('https://example.org/1', {
+      fetchImpl: async (input) => routes[input](),
+      resolve: openResolver,
+      requireDns: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(cancelled).toBe(true);
+  });
+
+  it('cancels the body of a non-2xx response', async () => {
+    let cancelled = false;
+    const result = await safeFetch('https://example.org/gone', {
+      fetchImpl: async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(ctrl) {
+              ctrl.enqueue(new TextEncoder().encode('error page'));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+          { status: 503 },
+        ),
+      resolve: openResolver,
+      requireDns: true,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(cancelled).toBe(true);
+  });
+
+  it('still reads a well-behaved body inside the deadline', async () => {
+    // The guard must not turn a slow-but-finishing feed into a timeout.
+    const result = await safeFetch('https://example.org/slow-but-ok', {
+      fetchImpl: async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            async start(ctrl) {
+              ctrl.enqueue(new TextEncoder().encode('<rss>'));
+              await new Promise((r) => setTimeout(r, 20));
+              ctrl.enqueue(new TextEncoder().encode('</rss>'));
+              ctrl.close();
+            },
+          }),
+          { status: 200 },
+        ),
+      resolve: openResolver,
+      requireDns: true,
+      timeoutMs: 2000,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.body).toBe('<rss></rss>');
+  });
+
   it('reports a transport failure as a network error with no detail leak', async () => {
     const result = await safeFetch('https://example.org/down', {
       fetchImpl: async () => {

@@ -73,6 +73,10 @@ export function readAnthropicConfig(): AnthropicRuntimeConfig {
       500,
       100000,
     ),
+    // 0 (or anything below it) means DISABLED — `processEnrichments` returns
+    // `skipped: 'disabled'` before leasing. Any positive value is a real cap;
+    // the floor of 0 exists only so the kill switch is expressible, because
+    // private.bump_rate_limit rejects a limit below 1 (rev-003 N3).
     dailyCap: readInt('AI_DAILY_CAP', AI_DAILY_CAP_DEFAULT, 0, 100000),
   };
 }

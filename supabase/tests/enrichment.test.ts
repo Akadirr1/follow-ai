@@ -72,6 +72,8 @@ type FakeOptions = {
   jobs?: EnrichmentJob[];
   enqueueStatus?: string;
   enqueueCreated?: boolean;
+  enqueueCharged?: boolean;
+  enqueueAllowed?: boolean;
   /** Return false to simulate a lost lease. */
   writeSucceeds?: boolean;
   /** Per-action allow/deny for bumpRateLimit. */
@@ -96,6 +98,25 @@ function fakeDb(options: FakeOptions = {}) {
         status: options.enqueueStatus ?? 'queued',
         created: options.enqueueCreated ?? true,
       };
+    },
+    async enqueueJobCharged(input) {
+      calls.push({ fn: 'enqueueJobCharged', args: input });
+      const created = options.enqueueCreated ?? true;
+      return {
+        job_id: JOB_ID,
+        status: options.enqueueStatus ?? 'queued',
+        created,
+        // The SQL charges exactly when it created; the fake mirrors that.
+        charged: options.enqueueCharged ?? created,
+        allowed: options.enqueueAllowed ?? true,
+      };
+    },
+    async releaseJobUnattempted(jobId, leaseToken, availableAt, errorCode) {
+      calls.push({
+        fn: 'releaseJobUnattempted',
+        args: { jobId, leaseToken, availableAt, errorCode },
+      });
+      return options.writeSucceeds ?? true;
     },
     async leaseJobs(n) {
       calls.push({ fn: 'leaseJobs', args: n });
@@ -179,15 +200,16 @@ describe('requestEnrichment', () => {
     });
 
     expect(result).toEqual({ status: 'queued', jobId: JOB_ID, pollAfterSeconds: 30 });
-    expect(names()).toContain('enqueueJob');
-    expect(calls.find((c) => c.fn === 'enqueueJob')!.args).toEqual({
+    expect(names()).toContain('enqueueJobCharged');
+    expect(calls.find((c) => c.fn === 'enqueueJobCharged')!.args).toMatchObject({
       articleId: ARTICLE_ID,
       contentHash: HASH,
       promptVersion: 'v1',
       model: 'claude-opus-5',
     });
-    // Both budgets charged: the cheap check, then the expensive miss.
-    expect(names().filter((n) => n === 'bumpRateLimit')).toHaveLength(2);
+    // The cheap hourly check is still its own call; the expensive daily miss is
+    // now charged inside the enqueue, atomically (rev-003 N1).
+    expect(names().filter((n) => n === 'bumpRateLimit')).toHaveLength(1);
   });
 
   it('charges the two budgets against their documented policies', async () => {
@@ -195,18 +217,47 @@ describe('requestEnrichment', () => {
     await requestEnrichment({ ...base, db }, { articleId: ARTICLE_ID, deviceId: DEVICE });
 
     const bumps = calls.filter((c) => c.fn === 'bumpRateLimit').map((c) => c.args as Record<string, unknown>);
+    expect(bumps).toHaveLength(1);
     expect(bumps[0]).toMatchObject({
       subject: DEVICE,
       action: CHECK_POLICY.action,
       limit: 120,
       windowStart: '2026-08-21T12:00:00.000Z',
     });
-    expect(bumps[1]).toMatchObject({
+
+    // The daily miss travels with the enqueue so the two cannot disagree.
+    expect(calls.find((c) => c.fn === 'enqueueJobCharged')!.args).toMatchObject({
       subject: DEVICE,
       action: MISS_POLICY.action,
       limit: 30,
       windowStart: '2026-08-21T00:00:00.000Z',
     });
+  });
+
+  /**
+   * rev-003 N1. The response tells a queued client to poll. Charging the daily
+   * budget before discovering the job already existed meant following that
+   * instruction burned quota: 2.5 hours to exhaust a day at the 300-second
+   * no-key interval, 15 minutes at 30 seconds.
+   */
+  it('does not charge the daily budget for a poll of an existing job', async () => {
+    const { db, calls } = fakeDb({ enqueueCreated: false, enqueueCharged: false });
+    const result = await requestEnrichment({ ...base, db }, {
+      articleId: ARTICLE_ID,
+      deviceId: DEVICE,
+    });
+
+    expect(result).toMatchObject({ status: 'queued' });
+    const charged = calls.find((c) => c.fn === 'enqueueJobCharged')!.args as { subject: string };
+    expect(charged.subject).toBe(DEVICE);
+    // The hourly check still runs; nothing else charges.
+    expect(calls.filter((c) => c.fn === 'bumpRateLimit')).toHaveLength(1);
+  });
+
+  it('charges exactly once for a genuinely new job', async () => {
+    const { db, calls } = fakeDb({ enqueueCreated: true });
+    await requestEnrichment({ ...base, db }, { articleId: ARTICLE_ID, deviceId: DEVICE });
+    expect(calls.filter((c) => c.fn === 'enqueueJobCharged')).toHaveLength(1);
   });
 
   it('refuses at the hourly check limit before touching the database', async () => {
@@ -224,8 +275,10 @@ describe('requestEnrichment', () => {
     expect(names()).toEqual(['bumpRateLimit']);
   });
 
-  it('refuses at the daily miss limit without enqueuing', async () => {
-    const { db, names } = fakeDb({ limits: { request_enrichment_miss: false } });
+  it('refuses at the daily miss limit and creates no job', async () => {
+    // The SQL deletes the row it optimistically inserted and reports
+    // allowed:false, so an over-budget request leaves nothing behind.
+    const { db } = fakeDb({ enqueueAllowed: false, enqueueCreated: false });
     const result = await requestEnrichment({ ...base, db }, {
       articleId: ARTICLE_ID,
       deviceId: DEVICE,
@@ -233,7 +286,6 @@ describe('requestEnrichment', () => {
 
     expect(result).toMatchObject({ status: 'rate_limited', scope: 'miss' });
     expect(result).toMatchObject({ retryAfterSeconds: 12 * 3600 });
-    expect(names()).not.toContain('enqueueJob');
   });
 
   /**
@@ -313,7 +365,7 @@ describe('requestEnrichment', () => {
       reason: 'no_api_key',
     });
     // The backlog is real work — it runs the moment a key appears.
-    expect(names()).toContain('enqueueJob');
+    expect(names()).toContain('enqueueJobCharged');
   });
 
   it('tells the truth about a job that already exhausted its attempts', async () => {
@@ -628,14 +680,16 @@ describe('processEnrichments', () => {
 
     expect(result.skipped).toBe('daily_cap');
     expect(client.seen).toEqual([]);
-    expect(names()).toContain('retryJob');
-    const retry = calls.find((c) => c.fn === 'retryJob')!.args as {
+    // rev-003 B1: the inverse-of-leasing transition, not the ordinary retry.
+    expect(names()).toContain('releaseJobUnattempted');
+    expect(names()).not.toContain('retryJob');
+    const release = calls.find((c) => c.fn === 'releaseJobUnattempted')!.args as {
       availableAt: string;
       errorCode: string;
     };
-    expect(retry.errorCode).toBe('daily_cap');
+    expect(release.errorCode).toBe('daily_cap');
     // Back at the start of the next daily window, not a minute from now.
-    expect(retry.availableAt).toBe('2026-08-22T00:00:00.000Z');
+    expect(release.availableAt).toBe('2026-08-22T00:00:00.000Z');
   });
 
   it('requeues the whole remaining batch once capped, checking the cap only once', async () => {
@@ -653,7 +707,7 @@ describe('processEnrichments', () => {
     expect(result.retried).toBe(3);
     // The counter is not incremented once per remaining job.
     expect(calls.filter((c) => c.fn === 'bumpRateLimit')).toHaveLength(1);
-    expect(calls.filter((c) => c.fn === 'retryJob')).toHaveLength(3);
+    expect(calls.filter((c) => c.fn === 'releaseJobUnattempted')).toHaveLength(3);
   });
 
   it('processes a batch and reports each job separately', async () => {
@@ -710,6 +764,282 @@ describe('processEnrichments', () => {
     expect(serialised).not.toContain('Body text.');
     expect(serialised).not.toContain('A model shipped');
     expect(result.outcomes[0].code).toBe('refusal');
+  });
+});
+
+// ===========================================================================
+// rev-003 B1 — a STATEFUL fake that applies lease semantics
+//
+// The stateless fake above returns whatever job the caller handed it and never
+// applies the database's own rules. That is exactly what hid B1: leasing
+// increments `attempt_count` in SQL, the cap path put the job back through the
+// ordinary retry RPC, and nothing in the old test could see the increment
+// because the fake never made one.
+//
+// This fake implements the parts of 0004's `private.lease_ai_jobs` and 0010's
+// `internal_release_ai_job_unattempted` that the bug lived between:
+//
+//   lease   : status in (queued, leased) AND available_at <= now
+//             AND attempt_count < max_attempts
+//             -> attempt_count += 1, status = leased, fresh lease token
+//   release : token must match AND status = leased
+//             -> attempt_count -= 1 (floor 0), status = queued
+//   retry   : token must match -> status = queued, attempt UNCHANGED
+//
+// The retry/release asymmetry is the whole point: a test that cannot tell them
+// apart cannot detect the defect.
+// ===========================================================================
+
+type StoredJob = {
+  job_id: string;
+  lease_token: string | null;
+  status: 'queued' | 'leased' | 'ready' | 'failed';
+  attempt_count: number;
+  max_attempts: number;
+  available_at: number;
+  last_error_code: string | null;
+};
+
+function statefulDb(
+  initial: Partial<StoredJob> & { content_text?: string },
+  options: { capAllows?: () => boolean; now?: () => Date } = {},
+) {
+  const now = options.now ?? (() => NOW);
+  const stored: StoredJob = {
+    job_id: JOB_ID,
+    lease_token: null,
+    status: 'queued',
+    attempt_count: 0,
+    max_attempts: 5,
+    available_at: 0,
+    last_error_code: null,
+    ...initial,
+  };
+  let tokens = 0;
+
+  const db: EnrichmentDb = {
+    async leaseJobs(n) {
+      if (n < 1) return [];
+      const leaseable =
+        (stored.status === 'queued' || stored.status === 'leased') &&
+        stored.available_at <= now().getTime() &&
+        stored.attempt_count < stored.max_attempts;
+      if (!leaseable) return [];
+
+      // Exactly what private.lease_ai_jobs does.
+      stored.attempt_count += 1;
+      stored.status = 'leased';
+      tokens += 1;
+      stored.lease_token = `lease-${tokens}`;
+
+      return [
+        {
+          ...ARTICLE,
+          content_text: initial.content_text ?? ARTICLE.content_text,
+          job_id: stored.job_id,
+          lease_token: stored.lease_token,
+          prompt_version: 'v1',
+          model: 'claude-opus-5',
+          attempt_count: stored.attempt_count,
+          max_attempts: stored.max_attempts,
+          last_error_code: stored.last_error_code,
+        },
+      ];
+    },
+
+    async releaseJobUnattempted(jobId, leaseToken, availableAt, errorCode) {
+      if (jobId !== stored.job_id || leaseToken !== stored.lease_token) return false;
+      if (stored.status !== 'leased') return false;
+      stored.status = 'queued';
+      stored.lease_token = null;
+      stored.attempt_count = Math.max(0, stored.attempt_count - 1);
+      stored.available_at = Date.parse(availableAt);
+      stored.last_error_code = errorCode;
+      return true;
+    },
+
+    async retryJob(jobId, leaseToken, availableAt, errorCode) {
+      if (jobId !== stored.job_id || leaseToken !== stored.lease_token) return false;
+      if (stored.status !== 'leased') return false;
+      stored.status = 'queued';
+      stored.lease_token = null;
+      // Deliberately does NOT restore the attempt — this is the real RPC.
+      stored.available_at = Date.parse(availableAt);
+      stored.last_error_code = errorCode;
+      return true;
+    },
+
+    async failJob(jobId, leaseToken, errorCode) {
+      if (jobId !== stored.job_id || leaseToken !== stored.lease_token) return false;
+      stored.status = 'failed';
+      stored.lease_token = null;
+      stored.last_error_code = errorCode;
+      return true;
+    },
+
+    async completeJob(jobId, leaseToken) {
+      if (jobId !== stored.job_id || leaseToken !== stored.lease_token) return false;
+      stored.status = 'ready';
+      stored.lease_token = null;
+      return true;
+    },
+
+    async bumpRateLimit(_subject, action) {
+      if (action === 'ai_call') return options.capAllows ? options.capAllows() : true;
+      return true;
+    },
+
+    async findArticle() {
+      return ARTICLE;
+    },
+    async findSummary() {
+      return null;
+    },
+    async enqueueJob() {
+      return { job_id: JOB_ID, status: stored.status, created: false };
+    },
+    async enqueueJobCharged() {
+      return { job_id: JOB_ID, status: stored.status, created: false, charged: false, allowed: true };
+    },
+  };
+
+  return { db, stored };
+}
+
+describe('rev-003 B1: the daily cap must not spend a Claude attempt', () => {
+  const base = { now: () => NOW, random: () => 0, hasApiKey: true };
+
+  it('leaves a job at attempt 4 leaseable after three capped runs', async () => {
+    // One attempt from max_attempts. Under the old code each capped run leased
+    // (4 -> 5) and requeued without restoring, so run one stranded it: 5 is not
+    // < 5, and private.lease_ai_jobs would never return it again.
+    //
+    // The clock advances a day between runs because a deferral parks the job at
+    // the next daily window — without that, runs two and three would find
+    // nothing due and prove nothing.
+    let clock = NOW;
+    const { db, stored } = statefulDb(
+      { attempt_count: 4, max_attempts: 5 },
+      { capAllows: () => false, now: () => clock },
+    );
+    const client = okClient();
+
+    for (let run = 1; run <= 3; run += 1) {
+      const result = await processEnrichments({ ...base, db, client, now: () => clock });
+      expect({ run, skipped: result.skipped }).toEqual({ run, skipped: 'daily_cap' });
+      // Leased, so it was seen; released, so it was given back.
+      expect({ run, attempts: stored.attempt_count }).toEqual({ run, attempts: 4 });
+      expect({ run, status: stored.status }).toEqual({ run, status: 'queued' });
+      clock = new Date(clock.getTime() + 36 * 3600 * 1000);
+    }
+
+    // Still workable: Claude never ran, so no budget was spent.
+    expect(client.seen).toEqual([]);
+    expect(stored.attempt_count).toBeLessThan(stored.max_attempts);
+
+    // Prove it by actually leasing again once the cap lifts.
+    const leased = await db.leaseJobs(1);
+    expect(leased).toHaveLength(1);
+    expect(leased[0].attempt_count).toBe(5);
+  });
+
+  it('records the deferral reason without marking the job failed', async () => {
+    const { db, stored } = statefulDb({ attempt_count: 0 }, { capAllows: () => false });
+    await processEnrichments({ ...base, db, client: okClient() });
+
+    expect(stored.last_error_code).toBe('daily_cap');
+    expect(stored.status).toBe('queued');
+    expect(stored.attempt_count).toBe(0);
+  });
+
+  it('never drives attempt_count below zero', async () => {
+    // Defensive: the SQL floors at 0 because ai_jobs_attempts_non_negative
+    // would otherwise reject the row.
+    const { db, stored } = statefulDb({ attempt_count: 0 }, { capAllows: () => false });
+    for (let i = 0; i < 3; i += 1) {
+      await processEnrichments({ ...base, db, client: okClient() });
+    }
+    expect(stored.attempt_count).toBe(0);
+  });
+
+  it('still spends an attempt when Claude actually ran and failed', async () => {
+    // The release is ONLY for the cap path. A real transient failure did use an
+    // attempt and must keep the increment, or a permanently broken article
+    // would retry forever.
+    const { db, stored } = statefulDb({ attempt_count: 1 }, { capAllows: () => true });
+    const client = okClient({ ok: false, code: 'server_error', retryable: true });
+
+    const result = await processEnrichments({ ...base, db, client });
+
+    expect(result).toMatchObject({ retried: 1 });
+    expect(client.seen).toHaveLength(1);
+    // 1 -> leased (2) -> retried, no restore.
+    expect(stored.attempt_count).toBe(2);
+  });
+
+  it('exhausts attempts normally when every run really calls Claude', async () => {
+    let clock = NOW;
+    const { db, stored } = statefulDb(
+      { attempt_count: 0 },
+      { capAllows: () => true, now: () => clock },
+    );
+    const client = okClient({ ok: false, code: 'server_error', retryable: true });
+
+    for (let i = 0; i < 6; i += 1) {
+      await processEnrichments({ ...base, db, client, now: () => clock });
+      clock = new Date(clock.getTime() + 36 * 3600 * 1000);
+    }
+
+    // The budget is finite when it is genuinely spent — B1 must not make jobs
+    // immortal, only stop the cap from charging them.
+    expect(stored.status).toBe('failed');
+    expect(stored.attempt_count).toBe(5);
+  });
+
+  it('refuses to release with a stale lease token', async () => {
+    const { db, stored } = statefulDb({ attempt_count: 2 }, { capAllows: () => false });
+    await db.leaseJobs(1);
+    const realToken = stored.lease_token!;
+
+    expect(await db.releaseJobUnattempted(JOB_ID, 'someone-elses-token', NOW.toISOString(), 'daily_cap'))
+      .toBe(false);
+    // Untouched: 2 -> leased (3), and the bogus release changed nothing.
+    expect(stored.attempt_count).toBe(3);
+
+    expect(await db.releaseJobUnattempted(JOB_ID, realToken, NOW.toISOString(), 'daily_cap')).toBe(true);
+    expect(stored.attempt_count).toBe(2);
+  });
+});
+
+describe('rev-003 N3: AI_DAILY_CAP=0 is a kill switch', () => {
+  const base = { now: () => NOW, random: () => 0, hasApiKey: true };
+
+  it('touches no jobs when the cap is zero', async () => {
+    // The config layer accepts 0 but private.bump_rate_limit rejects a limit
+    // below 1, so the old order leased jobs — incrementing their attempts — and
+    // then turned the cap check into a function error.
+    const { db, stored } = statefulDb({ attempt_count: 2 });
+    const client = okClient();
+
+    const result = await processEnrichments({ ...base, db, client, dailyCap: 0 });
+
+    expect(result).toEqual({ skipped: 'disabled', ready: 0, retried: 0, failed: 0, outcomes: [] });
+    expect(client.seen).toEqual([]);
+    expect(stored.attempt_count).toBe(2);
+    expect(stored.status).toBe('queued');
+  });
+
+  it('treats a negative cap as disabled too, rather than as a SQL error', async () => {
+    const { db } = statefulDb({});
+    const result = await processEnrichments({ ...base, db, client: okClient(), dailyCap: -1 });
+    expect(result.skipped).toBe('disabled');
+  });
+
+  it('still works normally for a positive cap', async () => {
+    const { db, stored } = statefulDb({ attempt_count: 0 }, { capAllows: () => true });
+    const result = await processEnrichments({ ...base, db, client: okClient(), dailyCap: 200 });
+    expect(result).toMatchObject({ ready: 1 });
+    expect(stored.status).toBe('ready');
   });
 });
 
