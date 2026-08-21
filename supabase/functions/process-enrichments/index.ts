@@ -23,6 +23,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { createClaudeClient, readAnthropicConfig } from '../_shared/anthropic-deno.ts';
+import { resolveAiProvider } from '../_shared/ai-provider.ts';
 import { readJsonBody, requireMethod } from '../_shared/auth.ts';
 import {
   AUTOMATIONS_SECRET_NAME,
@@ -41,6 +42,31 @@ import {
   newRequestId,
   requireOnlyKeys,
 } from '../_shared/error.ts';
+
+/**
+ * Reads one allow-listed Vault secret through the transport shim, memoised for
+ * this invocation — the same discipline `secret.ts` uses, so resolving three
+ * providers costs at most three round trips and never one per lookup.
+ */
+function vaultReader(
+  client: { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> },
+  prefix: string,
+): (name: string) => Promise<string | null> {
+  const cache = new Map<string, Promise<string | null>>();
+  return (name) => {
+    const hit = cache.get(name);
+    if (hit) return hit;
+    const pending = (async () => {
+      const { data, error } = await client.rpc(`${prefix}internal_get_setting`, {
+        p_name: name,
+      });
+      if (error) return null;
+      return typeof data === 'string' && data !== '' ? data : null;
+    })();
+    cache.set(name, pending);
+    return pending;
+  };
+}
 
 function rpcRouting(): { schema: string; prefix: string } {
   return {
@@ -112,11 +138,27 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const { maxJobs } = parseRequest(await readJsonBody(request));
     const config = readAnthropicConfig();
 
-    // The no-key path still returns before any JOB is touched. It now costs one
-    // Vault read for authentication, which P4's version avoided by reading the
-    // secret from the environment — unavoidable when the secret lives in the
-    // database, and still nothing that leases, writes or calls Claude.
-    if (config.apiKey === null) {
+    // Which provider answers is configuration (addendum §H). The same resolver
+    // runs in `request-enrichment`, so the model string that goes into the job
+    // row is the one this worker will write back — that agreement is what keeps
+    // the summary cache key from diverging.
+    //
+    // Anthropic needs its SDK, which cannot be imported into a portable module,
+    // so the resolver takes a factory for it and builds the other two itself.
+    const resolved = await resolveAiProvider(
+      { get: (name) => Deno.env.get(name) },
+      vaultReader(client, routing.prefix),
+      {
+        fetchImpl: fetch,
+        createAnthropicClient: (model) =>
+          createClaudeClient({ ...config, apiKey: config.apiKey ?? '', model }),
+      },
+    );
+
+    // The no-key path still returns before any JOB is touched: no lease, no
+    // attempt spent, no provider called. It costs the Vault reads the resolver
+    // made, which is unavoidable when the keys live in the database.
+    if (resolved.provider === null) {
       console.warn(
         JSON.stringify({
           event: 'process_enrichments_skipped',
@@ -134,10 +176,10 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const result = await processEnrichments(
       {
         db: createEnrichmentDb(client, { rpcPrefix: routing.prefix }),
-        client: createClaudeClient(config),
+        client: resolved.client,
         now: () => new Date(),
         hasApiKey: true,
-        model: config.model,
+        model: resolved.model,
         effort: config.effort,
         maxTokens: config.maxTokens,
         maxTokensEscalated: config.maxTokensEscalated,
@@ -153,7 +195,11 @@ Deno.serve(async (request: Request): Promise<Response> => {
       JSON.stringify({
         event: 'process_enrichments_done',
         request_id: requestId,
-        model: config.model,
+        // Watch this line after the first deploy: `provider` says who answered
+        // and `ready > 0` says the whole path works end to end.
+        provider: resolved.provider,
+        model: resolved.model,
+        fallback: resolved.fallback?.provider ?? null,
         effort: config.effort,
         skipped: result.skipped ?? null,
         ready: result.ready,
@@ -164,6 +210,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
           disposition: o.disposition,
           code: o.code,
           attempt: o.attempt,
+          // Differs from `model` above only when the fallback answered.
+          used_model: o.usedModel ?? null,
           input_tokens: o.usage?.inputTokens ?? 0,
           output_tokens: o.usage?.outputTokens ?? 0,
           cache_read_tokens: o.usage?.cacheReadTokens ?? 0,

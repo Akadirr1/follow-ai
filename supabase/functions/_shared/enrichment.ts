@@ -340,6 +340,15 @@ export type JobOutcome = {
   code: string;
   attempt: number;
   usage?: TokenUsage;
+  /**
+   * The model that actually produced the summary, as the provider reported it.
+   *
+   * Usually identical to the job's model. It differs when the fallback provider
+   * answered, and that is the only place the difference is visible — the row
+   * keeps the job's model so the cache key stays the one `request-enrichment`
+   * looks up. See agents/reports/p11.md.
+   */
+  usedModel?: string;
 };
 
 export type ProcessResult = {
@@ -492,9 +501,16 @@ export async function runOneJob(
       translation_state: translationStateFor(job.language),
     };
     const written = await deps.db.completeJob(job.job_id, job.lease_token, summary);
+    const used = outcome.model ?? undefined;
     return written
-      ? { ...base, disposition: 'ready', code: 'ok', usage: outcome.usage }
-      : { ...base, disposition: 'lease_lost', code: 'lease_lost', usage: outcome.usage };
+      ? { ...base, disposition: 'ready', code: 'ok', usage: outcome.usage, usedModel: used }
+      : {
+          ...base,
+          disposition: 'lease_lost',
+          code: 'lease_lost',
+          usage: outcome.usage,
+          usedModel: used,
+        };
   }
 
   const truncatedTwice = outcome.code === 'output_truncated' && alreadyEscalated;
@@ -502,11 +518,17 @@ export async function runOneJob(
   const shouldRetry = outcome.retryable && attemptsLeft && !truncatedTwice;
 
   if (shouldRetry) {
-    const delay = backoffSeconds(job.attempt_count, {
+    // A provider that told us how long to wait outranks our own backoff, but
+    // only upwards: Google's free tier answers a 429 with a real Retry-After,
+    // and retrying earlier than it asked just spends the next slot on another
+    // 429. Capped, so a hostile or mistaken header cannot park a job for a week.
+    const backoff = backoffSeconds(job.attempt_count, {
       baseSeconds: AI_BACKOFF_BASE_SECONDS,
       maxSeconds: AI_BACKOFF_MAX_SECONDS,
       random: deps.random,
     });
+    const asked = Math.min(outcome.retryAfterSeconds ?? 0, AI_BACKOFF_MAX_SECONDS);
+    const delay = Math.max(backoff, asked);
     const availableAt = addSeconds(deps.now(), delay);
     const ok = await deps.db.retryJob(job.job_id, job.lease_token, availableAt, outcome.code);
     return ok

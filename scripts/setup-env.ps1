@@ -10,7 +10,8 @@
   - Gizli değerler ekranda görünmez (SecureString). EXPO_PUBLIC_* değişkenleri
     tasarım gereği herkese açıktır; onlar düz metin sorulur ve özet ekranında
     açıkça gösterilir.
-  - ANTHROPIC_API_KEY canlı doğrulanır (GET /v1/models). -SkipVerify ile kapatılır.
+  - ANTHROPIC_API_KEY verilmişse canlı doğrulanır (GET /v1/models). -SkipVerify ile kapatılır.
+  - Gemini/NVIDIA anahtarları istege baglidir: canlida Supabase Vault'tan okunur.
   - EXPO_TOKEN isteğe bağlı; -VerifyExpo verilirse `eas whoami` ile doğrulanır
     (eas-cli'yi npx ile indirir, ilk seferde yavaştır).
   - .env dosyasını yalnızca senin kullanıcın okuyabilecek şekilde kilitler (icacls).
@@ -48,8 +49,22 @@ if (-not $EnvPath) { $EnvPath = Join-Path $RepoRoot '.env' }
 # ---------------------------------------------------------------- tanımlar
 # Sıra = sorulma sırası. secret=$false olanlar düz metin girilir ve varsayılanı vardır.
 $Vars = @(
-  @{ Name = 'ANTHROPIC_API_KEY'; Secret = $true;  Required = $true
-     Prompt = 'Anthropic API anahtari (Claude ozet + EN->TR ceviri; console.anthropic.com)'
+  # --- Ozet saglayicisi (P11, addendum SH) ---------------------------------
+  # Ucu de sunucu tarafi: hicbiri EXPO_PUBLIC_ almaz. Canli kurulumda Gemini ve
+  # NVIDIA anahtarlari Supabase Vault'tan okunur; buradakiler istege bagli yerel
+  # gecersiz kilmalardir ve bos birakilabilir.
+  @{ Name = 'AI_PROVIDER';       Secret = $false; Required = $false; Default = 'auto'
+     Prompt = 'Ozet saglayicisi: gemini | nvidia | anthropic | auto (Enter = auto)' }
+  @{ Name = 'GEMINI_API_KEY';    Secret = $true;  Required = $false
+     Prompt = 'Google AI Studio anahtari (istege bagli; normalde Vault''tan gelir)' }
+  @{ Name = 'GEMINI_MODEL';      Secret = $false; Required = $false; Default = 'gemini-2.5-flash'
+     Prompt = 'Gemini modeli (Enter = gemini-2.5-flash)' }
+  @{ Name = 'NVIDIA_API_KEY';    Secret = $true;  Required = $false
+     Prompt = 'NVIDIA NIM anahtari (istege bagli; normalde Vault''tan gelir)' }
+  @{ Name = 'NVIDIA_MODEL';      Secret = $false; Required = $false; Default = 'meta/llama-3.3-70b-instruct'
+     Prompt = 'NVIDIA modeli (Enter = meta/llama-3.3-70b-instruct)' }
+  @{ Name = 'ANTHROPIC_API_KEY'; Secret = $true;  Required = $false
+     Prompt = 'Anthropic API anahtari (bu projede YOK; bos birakin)'
      Pattern = '^sk-ant-'; PatternHint = 'sk-ant- ile baslamali' }
   @{ Name = 'ANTHROPIC_MODEL';   Secret = $false; Required = $false; Default = 'claude-opus-5'
      Prompt = 'Claude modeli (Enter = claude-opus-5)' }
@@ -168,6 +183,8 @@ foreach ($v in $Vars) {
 }
 
 # ---------------------------------------------------------------- doğrulama
+# Yalnizca Anthropic anahtari dogrulanir; Gemini/NVIDIA icin canli dogrulama
+# yoktur (kota harcar) ve anahtarlar normalde Vault'tan gelir.
 if ($result['ANTHROPIC_API_KEY'] -and -not $SkipVerify) {
   Write-Host 'ANTHROPIC_API_KEY dogrulaniyor (GET /v1/models)...'
   if (Test-AnthropicKey $result['ANTHROPIC_API_KEY']) { Write-Host '   -> OK' -ForegroundColor Green }

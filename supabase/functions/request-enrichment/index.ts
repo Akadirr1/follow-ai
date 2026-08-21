@@ -23,7 +23,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { readJsonBody, requireDeviceId, requireMethod } from '../_shared/auth.ts';
-import { DEFAULT_MODEL } from '../_shared/anthropic-config.ts';
+import { resolveAiProvider } from '../_shared/ai-provider.ts';
+import { DEFAULT_MODEL as ANTHROPIC_FALLBACK_MODEL } from '../_shared/anthropic-config.ts';
 import { createEnrichmentDb } from '../_shared/enrichment-db.ts';
 import {
   requestEnrichment,
@@ -39,6 +40,31 @@ import { PROMPT_VERSION } from '../_shared/prompt.ts';
 import { isUuidV4 } from '../_shared/rate-limit.ts';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Reads one allow-listed Vault secret through the transport shim, memoised for
+ * this invocation — the same discipline `secret.ts` uses, so resolving three
+ * providers costs at most three round trips and never one per lookup.
+ */
+function vaultReader(
+  client: { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> },
+  prefix: string,
+): (name: string) => Promise<string | null> {
+  const cache = new Map<string, Promise<string | null>>();
+  return (name) => {
+    const hit = cache.get(name);
+    if (hit) return hit;
+    const pending = (async () => {
+      const { data, error } = await client.rpc(`${prefix}internal_get_setting`, {
+        p_name: name,
+      });
+      if (error) return null;
+      return typeof data === 'string' && data !== '' ? data : null;
+    })();
+    cache.set(name, pending);
+    return pending;
+  };
+}
 
 /**
  * Where the internal RPCs live (addendum §C.1). Defaults to the `public`
@@ -83,16 +109,29 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
     const input = parseRequest(await readJsonBody(request));
 
-    // Presence only — the key itself is never read, logged or returned here.
-    const hasApiKey = (Deno.env.get('ANTHROPIC_API_KEY') ?? '').trim() !== '';
-    const model = (Deno.env.get('ANTHROPIC_MODEL') ?? '').trim() || DEFAULT_MODEL;
-
     const routing = rpcRouting();
     const client = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       db: { schema: routing.schema },
       global: { headers: { 'x-request-id': requestId } },
     });
+
+    // THE MODEL MUST COME FROM THE RESOLVER, not from a hard-coded default.
+    // It is part of the summary cache key (article_id, content_hash,
+    // prompt_version, model), so if this handler enqueued one model string and
+    // the worker wrote another, every lookup would miss forever and the client
+    // would poll a job that is already finished. `process-enrichments` calls
+    // the same resolver, and a test asserts the two agree.
+    //
+    // Only presence and the model string are used here — no key value is read,
+    // logged or returned, and no provider client is ever called on this path.
+    const resolved = await resolveAiProvider(
+      { get: (name) => Deno.env.get(name) },
+      vaultReader(client, routing.prefix),
+      { fetchImpl: fetch },
+    );
+    const hasApiKey = resolved.provider !== null;
+    const model = resolved.provider !== null ? resolved.model : ANTHROPIC_FALLBACK_MODEL;
 
     const result = await requestEnrichment(
       {

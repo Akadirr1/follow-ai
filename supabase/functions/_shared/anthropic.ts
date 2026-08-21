@@ -177,6 +177,15 @@ export type ClaudeOutcome =
       retryable: boolean;
       /** Bounded, non-sensitive. Safe to log and to store. */
       detail?: string;
+      /**
+       * What the provider asked us to wait, from a `Retry-After` header.
+       *
+       * Google AI Studio's free tier is requests-per-minute limited and says so
+       * on a 429. Our own backoff is computed from the attempt count and knows
+       * nothing about that, so ignoring this would mean retrying into the same
+       * wall. `runOneJob` takes whichever delay is longer.
+       */
+      retryAfterSeconds?: number;
     };
 
 export const EMPTY_USAGE: TokenUsage = {
@@ -370,6 +379,29 @@ export function classifyClaudeError(error: unknown): {
 export interface ClaudeClient {
   summarise(input: EnrichmentInput): Promise<ClaudeOutcome>;
 }
+
+// ---------------------------------------------------------------------------
+// Provider-neutral names (addendum §H)
+//
+// Anthropic is no longer the only backend: the human has a Google AI Studio key
+// and an NVIDIA NIM key and will not get an Anthropic one. The SHAPE stays
+// exactly as it was — same input, same outcome union, same failure codes, same
+// runtime validator — so every provider is judged by identical rules and the
+// worker cannot tell them apart. Only the names generalise.
+//
+// The Claude-flavoured names are kept and re-exported rather than renamed: the
+// existing suites import them, and a rename would have produced a large diff
+// whose only content was churn.
+// ---------------------------------------------------------------------------
+
+/** What every provider implements. Alias of `ClaudeClient`. */
+export type SummariseClient = ClaudeClient;
+
+/** Alias of `ClaudeOutcome`. */
+export type SummariseOutcome = ClaudeOutcome;
+
+/** Alias of `EnrichmentInput`. */
+export type SummariseInput = EnrichmentInput;
 
 /** The client used when ANTHROPIC_API_KEY is unset (addendum §E). */
 export const NO_KEY_CLIENT: ClaudeClient = {
